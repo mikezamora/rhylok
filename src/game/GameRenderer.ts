@@ -7,6 +7,10 @@ export class GameRenderer {
     time: number;
     accuracy: number;
   }> = [];
+  private lanePressed: Array<{
+    lane: number;
+    time: number;
+  }> = [];
   
   constructor(ctx: CanvasRenderingContext2D) {
     this.ctx = ctx;
@@ -14,6 +18,35 @@ export class GameRenderer {
   
   public renderLanes(canvasWidth: number, canvasHeight: number, laneCount: number): void {
     const laneWidth = canvasWidth / laneCount;
+    const currentTime = Date.now();
+    
+    // Clean up old lane presses
+    this.lanePressed = this.lanePressed.filter(press => currentTime - press.time < 200);
+    
+    // Create a set of currently pressed lanes for quick lookup
+    const pressedLanes = new Set(this.lanePressed.map(press => press.lane));
+    
+    // Draw lane backgrounds with expansion effect
+    for (let i = 0; i < laneCount; i++) {
+      const isPressed = pressedLanes.has(i);
+      const baseX = i * laneWidth;
+      const baseWidth = laneWidth;
+      
+      if (isPressed) {
+        // Find the most recent press for this lane to calculate expansion
+        const recentPress = this.lanePressed
+          .filter(press => press.lane === i)
+          .sort((a, b) => b.time - a.time)[0];
+        
+        const timeSincePress = currentTime - recentPress.time;
+        const progress = Math.min(timeSincePress / 200, 1); // 200ms animation
+        const expansion = (1 - progress) * 10; // Maximum 10px expansion
+        
+        // Draw expanded lane background
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${0.1 * (1 - progress)})`;
+        this.ctx.fillRect(baseX - expansion, 0, baseWidth + (expansion * 2), canvasHeight);
+      }
+    }
     
     // Draw lane dividers
     this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
@@ -27,15 +60,25 @@ export class GameRenderer {
       this.ctx.stroke();
     }
     
-    // Draw lane indicators (key labels)
+    // Draw lane indicators (key labels) with press effect
     const keyLabels = ['A', 'S', 'D', 'F', 'J', 'K', 'L', ';'];
-    this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
     this.ctx.font = '24px Arial';
     this.ctx.textAlign = 'center';
     
     for (let i = 0; i < laneCount; i++) {
       const x = (i + 0.5) * laneWidth;
       const y = canvasHeight - 40;
+      const isPressed = pressedLanes.has(i);
+      
+      if (isPressed) {
+        // Brighter and slightly larger text when pressed
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        this.ctx.font = '26px Arial';
+      } else {
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+        this.ctx.font = '24px Arial';
+      }
+      
       this.ctx.fillText(keyLabels[i], x, y);
     }
   }
@@ -133,6 +176,13 @@ export class GameRenderer {
       lane,
       time: Date.now(),
       accuracy
+    });
+  }
+  
+  public showLanePress(lane: number): void {
+    this.lanePressed.push({
+      lane,
+      time: Date.now()
     });
   }
   

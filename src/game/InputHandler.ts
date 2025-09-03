@@ -1,6 +1,7 @@
 export class InputHandler {
   private keyMap: Map<string, number> = new Map();
   public onKeyPress: ((lane: number) => void) | null = null;
+  public onSpacePress: (() => void) | null = null;
   
   constructor() {
     this.setupKeyMap();
@@ -25,6 +26,15 @@ export class InputHandler {
   }
   
   private handleKeyDown(event: KeyboardEvent): void {
+    // Handle spacebar for play/pause
+    if (event.code === 'Space') {
+      event.preventDefault();
+      if (this.onSpacePress) {
+        this.onSpacePress();
+      }
+      return;
+    }
+    
     // Prevent default behavior for game keys
     if (this.keyMap.has(event.code)) {
       event.preventDefault();

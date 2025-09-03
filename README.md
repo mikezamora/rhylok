@@ -6,7 +6,27 @@ A dynamic rhythm game that generates beats from the vibe of any song you upload,
 
 🎵 **Dynamic Beat Generation**: Uses Web Audio API to analyze any audio file and generate rhythm patterns based on the song's energy and frequency content
 
-🎛️ **Tunable Sensitivity**: Adjust beat detection sensitivity from 0.1x to 2.0x to match your preferred difficulty level
+🎛️ **Tunable Sensitivity**: Adjust beat detection sensitivity from 0.1x to 5.0x to match your preferred difficulty level
+
+🎚️ **Playback Speed Control**: Slow down (0.5x) for practice or speed up (2.0x) for extreme challenge - note timing adjusts automatically
+
+🎸 **Instrument Focus**: Target specific instruments or frequency ranges:
+- **All Frequencies**: Standard full-spectrum detection
+- **Bass**: Focus on bass lines and low-end (20-250Hz)
+- **Drums**: Target drum hits and percussion (60-150Hz) 
+- **Vocals**: Follow vocal melodies and mid-range (300-3kHz)
+- **Treble**: Track high-frequency elements like cymbals (2-20kHz)
+- **Custom Range**: Set your own frequency range for ultimate precision
+
+🔥 **Extreme Difficulty Modes**:
+- **Normal**: Standard gameplay experience
+- **Hard**: 1.3x sensitivity, 1.4x note frequency, enhanced patterns
+- **Extreme**: 1.8x sensitivity, 2.0x note frequency, syncopated rhythms
+- **Intensity Master**: 2.5x sensitivity, 3.0x note frequency, chord patterns that follow the most intense moments
+
+⚡ **Intensity-Based Beat Generation**: Tracks the most intense, climactic moments in songs for incredibly satisfying gameplay that matches the emotional peaks
+
+🎼 **Time Signature Awareness**: Optional detection and following of time signature changes in complex songs
 
 ⌨️ **Ergonomic Controls**: Designed for natural hand positioning:
 - Left hand: `A` `S` `D` `F`

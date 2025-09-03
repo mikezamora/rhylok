@@ -37,6 +37,26 @@ body {
   gap: 10px;
 }
 
+#hide-controls-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ff6b6b;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+#hide-controls-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  transform: scale(1.1);
+}
+
 #score-display,
 #combo-display {
   background: rgba(0, 0, 0, 0.7);
@@ -66,35 +86,78 @@ body {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  padding: 15px 20px;
-  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  z-index: 100;
+  min-width: 800px;
+  max-width: 90vw;
+}
+
+.control-row {
   display: flex;
   gap: 20px;
   align-items: center;
-  z-index: 100;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .control-group {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  white-space: nowrap;
 }
 
 .control-group label {
   font-size: 14px;
   color: #ccc;
+  min-width: fit-content;
 }
 
-#sensitivity {
+#sensitivity,
+#playback-speed {
   width: 120px;
   accent-color: #ff6b6b;
 }
 
-#sensitivity-value {
+#sensitivity-value,
+#playback-speed-value {
   font-weight: bold;
   color: #ff6b6b;
-  min-width: 30px;
+  min-width: 35px;
+  text-align: center;
+}
+
+#instrument-focus,
+#difficulty-mode {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: white;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+#custom-freq-min,
+#custom-freq-max {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: white;
+  font-size: 12px;
+  width: 80px;
+}
+
+input[type="checkbox"] {
+  accent-color: #ff6b6b;
+  transform: scale(1.2);
 }
 
 #audio-file {
