@@ -151,6 +151,7 @@ export class RhythemGame {
     // Keyboard input for rhythm game
     this.inputHandler.onKeyPress = this.handleKeyPress.bind(this);
     this.inputHandler.onSpacePress = this.togglePlayPause.bind(this);
+    this.inputHandler.onEscapePress = this.toggleSettings.bind(this);
   }
   
   private updateInstrumentFocus(): void {
@@ -327,11 +328,11 @@ export class RhythemGame {
     this.notes.sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  private togglePlayPause(): void {
+  private async togglePlayPause(): Promise<void> {
     if (this.isPlaying) {
-      this.pause();
+      await this.pause();
     } else {
-      this.play();
+      await this.play();
     }
   }
 
@@ -440,6 +441,11 @@ export class RhythemGame {
       hideControlsBtn.title = 'Hide Controls';
       this.controlsVisible = true;
     }
+  }
+
+  private toggleSettings(): void {
+    // Use the same logic as toggleControlsVisibility
+    this.toggleControlsVisibility();
   }
 
   private async autoDetectSensitivity(): Promise<void> {
@@ -582,18 +588,18 @@ export class RhythemGame {
     }, 3000);
   }
 
-  private play(): void {
+  private async play(): Promise<void> {
     if (!this.audioAnalyzer.getAudioBuffer() && !this.audioAnalyzer.isUsingMicrophoneInput()) {
       alert('Please upload an audio file first or enable microphone input.');
       return;
     }
     
-    this.audioAnalyzer.play();
+    await this.audioAnalyzer.play();
     this.isPlaying = this.audioAnalyzer.getIsPlaying();
   }
 
-  private pause(): void {
-    this.audioAnalyzer.pause();
+  private async pause(): Promise<void> {
+    await this.audioAnalyzer.pause();
     this.isPlaying = this.audioAnalyzer.getIsPlaying();
   }
 

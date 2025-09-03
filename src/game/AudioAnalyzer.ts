@@ -4,10 +4,6 @@ export class AudioAnalyzer {
   private sourceNode: AudioBufferSourceNode | null = null;
   private analyserNode: AnalyserNode | null = null;
   private frequencyData: Uint8Array | null = null;
-  private startTime = 0;
-  private pauseOffset = 0;
-  private isPlaying = false;
-  private isPaused = false;
   private playbackRate = 1.0;
   private microphoneSource: MediaStreamAudioSourceNode | null = null;
   private microphoneStream: MediaStream | null = null;
@@ -83,6 +79,13 @@ export class AudioAnalyzer {
       throw new Error('Audio not loaded');
     }
 
+    // If audio context is suspended (paused), resume it
+    if (this.audioContext.state === 'suspended' && this.sourceNode) {
+      await this.audioContext.resume();
+      console.log('▶️ Resumed playback');
+      return;
+    }
+
     // Stop previous playback if exists
     this.stop();
 
@@ -95,26 +98,22 @@ export class AudioAnalyzer {
     this.sourceNode.connect(this.analyserNode);
     this.analyserNode.connect(this.audioContext.destination);
     
-    // Start playback from pause offset if resuming
-    const startOffset = this.isPaused ? this.pauseOffset : 0;
-    this.sourceNode.start(0, startOffset);
-    this.startTime = this.audioContext.currentTime - startOffset;
-    this.isPlaying = true;
-    this.isPaused = false;
+    // Start playback from the beginning
+    this.sourceNode.start(0);
+    
+    console.log('▶️ Started new playback');
     
     // Handle ended event
     this.sourceNode.onended = () => {
-      this.isPlaying = false;
-      this.isPaused = false;
-      this.pauseOffset = 0;
+      console.log('🏁 Song ended');
     };
   }
 
   public setPlaybackRate(rate: number): void {
     this.playbackRate = Math.max(0.25, Math.min(4.0, rate));
     
-    // If we have an active source node, update its playback rate
-    if (this.sourceNode && this.isPlaying) {
+    // If we have an active source node and audio is running, update its playback rate
+    if (this.sourceNode && this.getIsPlaying()) {
       this.sourceNode.playbackRate.value = this.playbackRate;
     }
   }
@@ -123,15 +122,15 @@ export class AudioAnalyzer {
     return this.playbackRate;
   }
 
-  public pause(): void {
-    if (this.isPlaying && this.audioContext) {
-      // Calculate current playback position
-      const currentTime = this.audioContext.currentTime;
-      const elapsed = (currentTime - this.startTime) * this.playbackRate;
-      this.pauseOffset = elapsed;
-      this.isPaused = true;
+  public async pause(): Promise<void> {
+    if (!this.audioContext || this.audioContext.state !== 'running') {
+      return;
     }
-    this.stop();
+
+    // Suspend the audio context to pause all audio processing
+    await this.audioContext.suspend();
+    
+    console.log('⏸️ Paused playback');
   }
 
   private stop(): void {
@@ -143,29 +142,26 @@ export class AudioAnalyzer {
       }
       this.sourceNode = null;
     }
-    this.isPlaying = false;
   }
 
   public reset(): void {
     this.stop();
-    this.isPaused = false;
-    this.pauseOffset = 0;
   }
 
   public getIsPlaying(): boolean {
-    return this.isPlaying;
+    return this.audioContext?.state === 'running' && this.sourceNode !== null;
   }
 
   public getIsPaused(): boolean {
-    return this.isPaused;
+    return this.audioContext?.state === 'suspended' && this.sourceNode !== null;
   }
 
   public getCurrentTime(): number {
-    if (!this.audioContext || !this.isPlaying) {
+    if (!this.audioContext || !this.getIsPlaying()) {
       return 0;
     }
     
-    return this.audioContext.currentTime - this.startTime;
+    return this.audioContext.currentTime;
   }
 
   public getFrequencyData(): Uint8Array {
@@ -181,7 +177,7 @@ export class AudioAnalyzer {
   public getFrequencyDataAtTime(time: number): Uint8Array | null {
     // For real-time analysis, we'll use current frequency data
     // In a more advanced implementation, you could pre-analyze the entire track
-    if (!this.isPlaying || Math.abs(this.getCurrentTime() * 1000 - time) > 100) {
+    if (!this.getIsPlaying() || Math.abs(this.getCurrentTime() * 1000 - time) > 100) {
       return null;
     }
     
@@ -225,8 +221,6 @@ export class AudioAnalyzer {
       this.microphoneSource.connect(this.analyserNode);
       
       this.isUsingMicrophone = true;
-      this.isPlaying = true;
-      this.startTime = this.audioContext.currentTime;
       
       console.log('Microphone input started successfully');
     } catch (error) {
@@ -247,7 +241,6 @@ export class AudioAnalyzer {
     }
     
     this.isUsingMicrophone = false;
-    this.isPlaying = false;
     
     console.log('Microphone input stopped');
   }
@@ -257,7 +250,7 @@ export class AudioAnalyzer {
   }
 
   public hasEnded(): boolean {
-    if (!this.audioBuffer || !this.isPlaying) {
+    if (!this.audioBuffer || !this.getIsPlaying()) {
       return true;
     }
     

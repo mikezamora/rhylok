@@ -2,6 +2,7 @@ export class InputHandler {
   private keyMap: Map<string, number> = new Map();
   public onKeyPress: ((lane: number) => void) | null = null;
   public onSpacePress: (() => void) | null = null;
+  public onEscapePress: (() => void) | null = null;
   
   constructor() {
     this.setupKeyMap();
@@ -31,6 +32,15 @@ export class InputHandler {
       event.preventDefault();
       if (this.onSpacePress) {
         this.onSpacePress();
+      }
+      return;
+    }
+    
+    // Handle escape key for hiding settings
+    if (event.code === 'Escape') {
+      event.preventDefault();
+      if (this.onEscapePress) {
+        this.onEscapePress();
       }
       return;
     }
