@@ -9,7 +9,12 @@
 - [x] Ability to hide controls after pausing and a pause button at the top right that will pause the song and show the controls again
 - [x] After changing any settings that would affect beats calculations on the uploaded file rescan the currently uploaded file for new beats
 - [x] Option to try to scan the selected song at different sensitivity levels and automatically determine which sensitivity will be the most fitting for the selected song and instrument and difficulty choice
-- [x]  Delete ALL emojis from the codebase and never ever use them when developing features
+- [x] Delete ALL emojis from the codebase and never ever use them when developing features
+- [ ] Option for selecting the fret board. I want the existing option to be the default. In addition to a 3d fret board option with an oscilloscope audio visualization
+- [ ] Save the current selected song in local storage and retrieve the value on window reload.
+- [ ] Save the current setting in local storage and retrieve the value on window reload.
+- [ ] Hash each file and use the hash to save the generated notes/beats in local storage, so they persist between sessions.
+- [ ] Add a button to clear/reset local storage
 
 ## Implementation Details
 
@@ -93,3 +98,44 @@
 - **Accessibility**: Better screen reader compatibility without emoji confusion
 - **Consistent Styling**: Uniform text-based UI elements throughout
 - **Maintainable Code**: No unicode characters that could cause encoding issues
+
+### ✅ 3D Fret Board with Oscilloscope Visualization
+
+- **Dual Rendering Modes**: Switch between classic 2D and immersive 3D fret board
+- **3D Perspective**: Notes approach from distance with realistic perspective scaling
+- **Real-Time Oscilloscope**: Live frequency visualization during playback
+- **Enhanced Visual Effects**: 3D lighting, shadows, and depth-based note rendering
+- **Seamless Integration**: Same gameplay mechanics with enhanced visual experience
+- **Performance Optimized**: Efficient 3D rendering using 2D canvas with perspective calculations
+
+### ✅ Persistent Song Storage
+
+- **Automatic Song Saving**: Current song info saved to localStorage on file selection
+- **Session Persistence**: Song selection persists across browser reloads
+- **File Hash Generation**: SHA-256 hashing for unique song identification
+- **Smart Recovery**: Automatically loads last played song when available
+- **Storage Efficiency**: Only stores essential song metadata, not audio data
+
+### ✅ Settings Persistence
+
+- **Complete Settings Backup**: All game settings saved automatically
+- **Auto-Load on Startup**: Settings restored when game initializes
+- **Real-Time Saving**: Settings saved immediately when changed
+- **Comprehensive Coverage**: Includes sensitivity, speed, difficulty, instrument focus, and fret board style
+- **Fallback Handling**: Graceful defaults when no saved settings exist
+
+### ✅ Intelligent Beat Caching
+
+- **File-Based Caching**: Generated beats saved using unique file hashes
+- **Instant Loading**: Previously analyzed songs load beats instantly
+- **Storage Optimization**: Efficient note data structure for minimal storage usage
+- **Cache Invalidation**: Regenerates beats when settings change significantly
+- **Cross-Session Persistence**: Beat data survives browser restarts and updates
+
+### ✅ Storage Management System
+
+- **Clear Storage Button**: One-click removal of all saved data
+- **Storage Usage Display**: Shows current storage usage and saved song count
+- **Confirmation Dialogs**: Prevents accidental data loss with detailed confirmation
+- **Selective Clearing**: Option to clear specific data types
+- **Storage Monitoring**: Real-time tracking of localStorage usage and limits
