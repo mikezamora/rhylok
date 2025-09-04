@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  rhylok:
+    build: .
+    ports:
+      - "6001:4173"
+    environment:
+      - NODE_ENV=production
+    restart: always
