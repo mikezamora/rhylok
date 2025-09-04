@@ -27,6 +27,7 @@ export class RhythemGame {
   private realtimeBeatDetectionInterval: number | null = null;
   private lastBeatTime = 0;
   private controlsVisible = true;
+  private currentSongHash: string | null = null;
 
   constructor() {
     this.canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
@@ -42,6 +43,9 @@ export class RhythemGame {
     this.beatDetector = new BeatDetector();
     this.inputHandler = new InputHandler();
     this.scoreManager = new ScoreManager();
+    
+    // Load saved settings
+    this.loadSettings();
     
     this.setupEventListeners();
     this.gameLoop();
@@ -152,6 +156,33 @@ export class RhythemGame {
     this.inputHandler.onKeyPress = this.handleKeyPress.bind(this);
     this.inputHandler.onSpacePress = this.togglePlayPause.bind(this);
     this.inputHandler.onEscapePress = this.toggleSettings.bind(this);
+
+    // Fretboard style selector
+    const fretboardStyle = document.getElementById('fretboard-style') as HTMLSelectElement;
+    fretboardStyle.addEventListener('change', (e) => {
+      const style = (e.target as HTMLSelectElement).value;
+      this.gameRenderer.set3DMode(style === '3d');
+      this.saveSettings();
+    });
+
+    // Save settings when any control changes
+    const saveOnChange = ['sensitivity', 'playback-speed', 'instrument-focus', 'difficulty-mode', 'time-signature-follow'];
+    saveOnChange.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) {
+        element.addEventListener('change', () => this.saveSettings());
+      }
+    });
+
+    // Clear storage button
+    const clearStorageBtn = document.getElementById('clear-storage') as HTMLButtonElement;
+    if (clearStorageBtn) {
+      clearStorageBtn.addEventListener('click', () => {
+        if (confirm('Are you sure you want to clear all saved data? This cannot be undone.')) {
+          this.clearLocalStorage();
+        }
+      });
+    }
   }
   
   private updateInstrumentFocus(): void {
@@ -188,6 +219,11 @@ export class RhythemGame {
         this.audioAnalyzer.getAudioBuffer(),
         this.sensitivity
       );
+      
+      // Update cached beats if we have a current song hash
+      if (this.currentSongHash) {
+        this.saveBeatsToStorage(this.currentSongHash, beats);
+      }
       
       // Convert beats to game notes
       this.generateNotesFromBeats(beats);
@@ -249,17 +285,34 @@ export class RhythemGame {
     if (!file) return;
     
     try {
-      // Load audio file
-      await this.audioAnalyzer.loadAudioFile(file);
+      // Generate hash for this file
+      this.currentSongHash = this.generateSongHash(file);
       
-      // Generate beats from audio analysis
-      const beats = await this.beatDetector.detectBeats(
-        this.audioAnalyzer.getAudioBuffer(),
-        this.sensitivity
-      );
+      // Try to load cached beats first
+      let beats = this.loadBeatsFromStorage(this.currentSongHash);
+      
+      if (!beats) {
+        // Load audio file
+        await this.audioAnalyzer.loadAudioFile(file);
+        
+        // Generate beats from audio analysis
+        beats = await this.beatDetector.detectBeats(
+          this.audioAnalyzer.getAudioBuffer(),
+          this.sensitivity
+        );
+        
+        // Save beats to cache
+        this.saveBeatsToStorage(this.currentSongHash, beats);
+      } else {
+        // Still need to load the audio file for playback
+        await this.audioAnalyzer.loadAudioFile(file);
+      }
       
       // Convert beats to game notes
       this.generateNotesFromBeats(beats);
+      
+      // Save current song reference
+      localStorage.setItem('rhylok-current-song', this.currentSongHash);
       
       console.log(`Generated ${this.notes.length} notes from ${beats.length} detected beats`);
       
@@ -696,13 +749,19 @@ export class RhythemGame {
     this.ctx.fillStyle = 'rgba(15, 15, 35, 0.3)';
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    // Render game components using GameRenderer
+    const frequencyData = this.audioAnalyzer.getFrequencyData() || new Uint8Array(0);
+    const currentTime = this.audioAnalyzer.isUsingMicrophoneInput() ? Date.now() : this.audioAnalyzer.getCurrentTime() * 1000;
     const laneCount = 8;
-    this.gameRenderer.renderLanes(this.canvas.width, this.canvas.height, laneCount);
-    this.gameRenderer.renderHitZone(this.canvas.width, this.canvas.height, laneCount);
-    this.gameRenderer.renderNotes(this.notes, this.canvas.width, laneCount);
-    this.gameRenderer.renderAudioVisualization(this.audioAnalyzer.getFrequencyData(), this.canvas.width, this.canvas.height);
-    this.gameRenderer.renderHitEffects(this.canvas.width, this.canvas.height, laneCount);
+    
+    // Use the unified render method that handles both 2D and 3D modes
+    this.gameRenderer.render(
+      this.notes,
+      frequencyData,
+      this.canvas.width,
+      this.canvas.height,
+      laneCount,
+      currentTime
+    );
     
     // Update score display
     document.getElementById('score')!.textContent = this.scoreManager.getScore().toString();
@@ -716,5 +775,160 @@ export class RhythemGame {
     
     this.stopRealtimeBeatDetection();
     this.audioAnalyzer.destroy();
+    this.gameRenderer.destroy();
+  }
+
+  private loadSettings(): void {
+    try {
+      const savedSettings = localStorage.getItem('rhylok-settings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        
+        // Apply saved settings to UI elements
+        this.applySetting('sensitivity', settings.sensitivity);
+        this.applySetting('playback-speed', settings.playbackSpeed);
+        this.applySetting('instrument-focus', settings.instrumentFocus);
+        this.applySetting('difficulty-mode', settings.difficultyMode);
+        this.applySetting('time-signature-follow', settings.timeSignatureFollow);
+        this.applySetting('fretboard-style', settings.fretboardStyle);
+        
+        // Apply settings to game components
+        if (settings.fretboardStyle === '3d') {
+          this.gameRenderer.set3DMode(true);
+        }
+      }
+
+      // Load saved song
+      const savedSong = localStorage.getItem('rhylok-current-song');
+      if (savedSong) {
+        // Note: This would need to be implemented when file handling is improved
+        console.log('Saved song found in localStorage:', savedSong);
+      }
+    } catch (error) {
+      console.warn('Failed to load settings from localStorage:', error);
+    }
+  }
+
+  private saveSettings(): void {
+    try {
+      const settings = {
+        sensitivity: this.getSetting('sensitivity'),
+        playbackSpeed: this.getSetting('playback-speed'),
+        instrumentFocus: this.getSetting('instrument-focus'),
+        difficultyMode: this.getSetting('difficulty-mode'),
+        timeSignatureFollow: this.getSetting('time-signature-follow'),
+        fretboardStyle: this.getSetting('fretboard-style')
+      };
+      
+      localStorage.setItem('rhylok-settings', JSON.stringify(settings));
+    } catch (error) {
+      console.warn('Failed to save settings to localStorage:', error);
+    }
+  }
+
+  private getSetting(id: string): any {
+    const element = document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+    if (!element) return null;
+    
+    if (element.type === 'checkbox') {
+      return (element as HTMLInputElement).checked;
+    } else if (element.type === 'range' || element.type === 'number') {
+      return parseFloat((element as HTMLInputElement).value);
+    } else {
+      return element.value;
+    }
+  }
+
+  private applySetting(id: string, value: any): void {
+    const element = document.getElementById(id) as HTMLInputElement | HTMLSelectElement;
+    if (!element || value === null || value === undefined) return;
+    
+    if (element.type === 'checkbox') {
+      (element as HTMLInputElement).checked = value;
+    } else if (element.type === 'range' || element.type === 'number') {
+      (element as HTMLInputElement).value = value.toString();
+      // Update display value if it exists
+      const displayElement = document.getElementById(`${id}-value`);
+      if (displayElement) {
+        if (id === 'playback-speed') {
+          displayElement.textContent = value.toFixed(1) + 'x';
+        } else {
+          displayElement.textContent = value.toString();
+        }
+      }
+    } else {
+      element.value = value;
+    }
+    
+    // Trigger change event to apply the setting
+    element.dispatchEvent(new Event('change'));
+  }
+
+  private generateSongHash(file: File): string {
+    // Simple hash based on file name, size, and last modified date
+    const hashString = `${file.name}-${file.size}-${file.lastModified}`;
+    let hash = 0;
+    for (let i = 0; i < hashString.length; i++) {
+      const char = hashString.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  private saveBeatsToStorage(songHash: string, beats: number[]): void {
+    try {
+      const beatsData = {
+        beats,
+        timestamp: Date.now(),
+        settings: {
+          sensitivity: this.sensitivity,
+          instrumentFocus: this.getSetting('instrument-focus'),
+          difficultyMode: this.getSetting('difficulty-mode')
+        }
+      };
+      localStorage.setItem(`rhylok-beats-${songHash}`, JSON.stringify(beatsData));
+    } catch (error) {
+      console.warn('Failed to save beats to localStorage:', error);
+    }
+  }
+
+  private loadBeatsFromStorage(songHash: string): number[] | null {
+    try {
+      const saved = localStorage.getItem(`rhylok-beats-${songHash}`);
+      if (saved) {
+        const beatsData = JSON.parse(saved);
+        // Check if settings match current settings
+        const currentSettings = {
+          sensitivity: this.sensitivity,
+          instrumentFocus: this.getSetting('instrument-focus'),
+          difficultyMode: this.getSetting('difficulty-mode')
+        };
+        
+        if (JSON.stringify(beatsData.settings) === JSON.stringify(currentSettings)) {
+          console.log('Loaded beats from cache');
+          return beatsData.beats;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to load beats from localStorage:', error);
+    }
+    return null;
+  }
+
+  private clearLocalStorage(): void {
+    try {
+      // Remove all rhylok-related items
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('rhylok-')) {
+          localStorage.removeItem(key);
+        }
+      });
+      alert('Local storage cleared successfully!');
+    } catch (error) {
+      console.warn('Failed to clear localStorage:', error);
+      alert('Failed to clear local storage.');
+    }
   }
 }
