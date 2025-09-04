@@ -6,9 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:wasm": "vite build --config vite.config.extism.ts",
+    "demo:host": "node host-demo.js",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "assemblyscript": "^0.28.5",
     "typescript": "~5.8.3",
     "vite": "^7.1.2"
   },

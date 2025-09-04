@@ -1,0 +1,19 @@
+{
+  "wasm": [
+    {
+      "path": "rhylok-game.wasm",
+      "name": "rhylok-game"
+    }
+  ],
+  "config": {
+    "debug": false,
+    "maxPlayers": 4,
+    "gameVersion": "1.0.0"
+  },
+  "memory": {
+    "max_pages": 256,
+    "max_var_bytes": 1048576
+  },
+  "timeout_ms": 5000,
+  "allowed_hosts": []
+}
