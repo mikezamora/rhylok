@@ -1,0 +1,239 @@
+// Generic WASM loader script for any TypeScript project
+import { createPlugin } from '@extism/extism'
+
+class {{ADAPTER_CLASS_NAME}} {
+  constructor() {
+    this.plugin = null
+    this.isInitialized = false
+    
+    // Wait for DOM to be ready before initializing WASM
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        this.loadWASMPlugin()
+        this.initializeUI()
+      })
+    } else {
+      // DOM is already ready
+      this.loadWASMPlugin()
+      this.initializeUI()
+    }
+  }
+
+  async loadWASMPlugin() {
+    try {
+      console.log('📦 Loading WASM plugin...')
+      
+      // Load the manifest and WASM file
+      const manifestResponse = await fetch('./manifest.json')
+      const manifest = await manifestResponse.json()
+      
+      const wasmResponse = await fetch('./{{WASM_FILE_NAME}}')
+      const wasmBytes = await wasmResponse.arrayBuffer()
+      
+      // Update manifest to use the loaded WASM data
+      manifest.wasm = [{ data: new Uint8Array(wasmBytes) }]
+      
+      // Create plugin with proper host functions for DOM manipulation
+      this.plugin = await createPlugin(manifest, {
+        useWasi: true,
+        functions: {
+          "extism:host/env": {
+            console_log(cp, offset) {
+              const message = cp.read(offset).text()
+              console.log('🔧 WASM:', message)
+              
+              // Also display in page console area if available
+              const consoleArea = document.getElementById('console-output')
+              if (consoleArea) {
+                consoleArea.innerHTML += `<div>🔧 WASM: ${message}</div>`
+              }
+            },
+            
+            // DOM element access
+            dom_get_element_by_id(cp, idOffset) {
+              const elementId = cp.read(idOffset).text()
+              console.log(`🔍 Looking for element: "${elementId}"`)
+              console.log(`🔍 Document ready state: ${document.readyState}`)
+              console.log(`🔍 All elements in DOM:`, Array.from(document.querySelectorAll('*')).map(el => el.id).filter(id => id))
+              
+              const element = document.getElementById(elementId)
+              console.log(`🔍 Element found:`, element ? 'FOUND' : 'NOT FOUND')
+              
+              if (!element) {
+                // Try a small delay and retry once
+                setTimeout(() => {
+                  const retryElement = document.getElementById(elementId)
+                  console.log(`🔄 Retry element "${elementId}":`, retryElement ? 'FOUND' : 'STILL NOT FOUND')
+                }, 100)
+              }
+              
+              return element ? 1 : 0
+            },
+            
+            // Text content setting
+            dom_set_text_content(cp, elementIdOffset, textOffset) {
+              const elementId = cp.read(elementIdOffset).text()
+              const text = cp.read(textOffset).text()
+              const element = document.getElementById(elementId)
+              
+              console.log(`🎯 Setting text for element: ${elementId} = "${text}"`)
+              
+              if (element) {
+                element.textContent = text
+                console.log(`✅ Successfully set text for ${elementId}`)
+                return 1
+              } else {
+                console.log(`❌ Element not found: ${elementId}`)
+              }
+              return 0
+            },
+            
+            // DOM element creation
+            dom_create_element(cp, tagNameOffset) {
+              const tagName = cp.read(tagNameOffset).text()
+              const element = document.createElement(tagName)
+              console.log(`🆕 Created element: ${tagName}`)
+              
+              // Add to document body temporarily and return a mock ID
+              element.id = 'generated-' + Date.now()
+              document.body.appendChild(element)
+              return 1
+            },
+            
+            // Fetch API
+            fetch_request(cp, urlOffset, methodOffset) {
+              const url = cp.read(urlOffset).text()
+              const method = cp.read(methodOffset).text()
+              console.log(`🌐 Fetch request: ${method} ${url}`)
+              
+              fetch(url, { method })
+                .then(response => response.text())
+                .then(data => {
+                  console.log(`✅ Fetch response:`, data.substring(0, 100))
+                  // Store response for WASM to read later
+                  const responseBytes = new TextEncoder().encode(data)
+                  cp.store(responseBytes)
+                })
+                .catch(error => {
+                  console.log(`❌ Fetch error:`, error.message)
+                  const errorBytes = new TextEncoder().encode(error.message)
+                  cp.store(errorBytes)
+                })
+              
+              return 1
+            },
+
+            // Event listener setup
+            dom_add_event_listener(cp, elementIdOffset, eventOffset, handlerOffset) {
+              const elementId = cp.read(elementIdOffset).text()
+              const eventType = cp.read(eventOffset).text()
+              const handlerName = cp.read(handlerOffset).text()
+              const element = document.getElementById(elementId)
+              
+              console.log(`🎪 Adding ${eventType} listener to ${elementId} -> ${handlerName}`)
+              
+              if (element) {
+                element.addEventListener(eventType, async () => {
+                  console.log(`🖱️ ${eventType} triggered, calling ${handlerName}`)
+                  try {
+                    const result = await this.plugin.call(handlerName)
+                    if (result) {
+                      console.log(`✅ Handler result:`, result.text())
+                    }
+                  } catch (error) {
+                    console.log(`❌ WASM handler error:`, error.message)
+                  }
+                })
+                return 1
+              }
+              return 0
+            },
+            
+            // Input value getter
+            dom_get_input_value(cp, elementIdOffset) {
+              const elementId = cp.read(elementIdOffset).text()
+              const element = document.getElementById(elementId)
+              if (element && (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA')) {
+                const value = element.value
+                console.log(`📝 Got input value from ${elementId}: "${value}"`)
+                // Store the value for WASM to read
+                const valueBytes = new TextEncoder().encode(value)
+                return cp.store(valueBytes)
+              }
+              return 0
+            }
+
+            {{DETECTED_HOST_FUNCTIONS}}
+          }
+        }
+      })
+      
+      // Initialize the WASM module
+      try {
+        console.log('🚀 Calling WASM main function...')
+        const result = await this.plugin.call('main')
+        if (result) {
+          const output = result.text()
+          console.log('✅ WASM main result:', output)
+        }
+      } catch (error) {
+        console.log('⚠️  No main function found or error:', error.message)
+      }
+      
+      this.isInitialized = true
+      console.log('✅ WASM plugin loaded successfully!')
+      
+    } catch (error) {
+      console.error('❌ Failed to load WASM plugin:', error)
+    }
+  }
+
+  initializeUI() {
+    // Setup UI when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      console.log('🌐 {{ADAPTER_CLASS_NAME}} initialized')
+      
+      // Setup specific button handlers
+      const testButton = document.getElementById('test-button')
+      if (testButton) {
+        testButton.addEventListener('click', async () => {
+          console.log('�️ Test button clicked, calling WASM...')
+          try {
+            const result = await this.plugin.call('handleButtonClick')
+            if (result) {
+              console.log('✅ Button click result:', result.text())
+            }
+          } catch (error) {
+            console.log('❌ WASM button handler error:', error.message)
+          }
+        })
+      }
+      
+      // Setup input processing
+      const userInput = document.getElementById('user-input')
+      if (userInput) {
+        userInput.addEventListener('input', async (e) => {
+          try {
+            const result = await this.plugin.call('processUserInput', e.target.value)
+            if (result) {
+              console.log('✅ Input processing result:', result.text())
+              
+              // Display result in output area
+              const outputArea = document.getElementById('output-area')
+              if (outputArea) {
+                outputArea.textContent = `Processed: ${result.text()}`
+              }
+            }
+          } catch (error) {
+            console.log('❌ WASM input processing error:', error.message)
+          }
+        })
+      }
+    })
+  }
+}
+
+// Initialize the WASM adapter when the page loads
+window.addEventListener('load', () => {
+  new {{ADAPTER_CLASS_NAME}}()
+})

@@ -1,0 +1,11 @@
+{
+  "wasm": [
+    {
+      "path": "dist-wasm/example.wasm"
+    }
+  ],
+  "config": {},
+  "memory": {
+    "max_pages": 5
+  }
+}

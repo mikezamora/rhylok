@@ -1,0 +1,22 @@
+{
+  "name": "extism-mvp-test",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist && mkdir -p dist",
+    "build": "npm run clean && asc main.ts --target release --outFile dist/main.wasm --use abort= --exportRuntime --bindings esm",
+    "test": "extism call dist/main.wasm hello",
+    "test-greet": "extism call dist/main.wasm greet --input \"World\"",
+    "test-manifest": "extism call --manifest manifest.json hello",
+    "test-all": "npm run test && npm run test-greet && extism call dist/main.wasm test && npm run test-manifest"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0",
+    "@extism/as-pdk": "^1.0.0"
+  },
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

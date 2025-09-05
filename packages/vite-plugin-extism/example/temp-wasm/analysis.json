@@ -1,0 +1,166 @@
+{
+  "domAPIs": [
+    "document\\.getElementById\\(",
+    "document\\.createElement\\(",
+    "\\.addEventListener\\(",
+    "\\.textContent\\s*=",
+    "\\.value",
+    "console\\.log\\(",
+    "fetch\\("
+  ],
+  "functions": [
+    {
+      "name": "p",
+      "params": [
+        "e"
+      ],
+      "returnType": "void",
+      "body": "const t={"
+    },
+    {
+      "name": "s",
+      "params": [
+        "e"
+      ],
+      "returnType": "void",
+      "body": "if(e.ep)return;e.ep=!0;const t=p(e);fetch(e.href,t)"
+    },
+    {
+      "name": "f",
+      "params": [],
+      "returnType": "void",
+      "body": "console.log(\"handleButtonClick called - this will be a WASM function!\");const o=document.getElementById(\"output-area\");o&&(o.textContent=\"Button clicked! WASM is working!\")"
+    },
+    {
+      "name": "m",
+      "params": [
+        "o"
+      ],
+      "returnType": "void",
+      "body": "return o.split(\"\").reverse().join(\"\").toUpperCase()"
+    }
+  ],
+  "variables": [
+    {
+      "name": "n",
+      "type": "any",
+      "initialValue": "document.createElement(\"link\").relList"
+    },
+    {
+      "name": "e",
+      "type": "any"
+    },
+    {
+      "name": "t",
+      "type": "any"
+    },
+    {
+      "name": "r",
+      "type": "any"
+    },
+    {
+      "name": "t",
+      "type": "any",
+      "initialValue": "{}"
+    },
+    {
+      "name": "t",
+      "type": "any",
+      "initialValue": "p(e)"
+    },
+    {
+      "name": "a",
+      "type": "any",
+      "initialValue": "document.getElementById(\"app\")"
+    },
+    {
+      "name": "i",
+      "type": "any",
+      "initialValue": "document.getElementById(\"test-button\")"
+    },
+    {
+      "name": "l",
+      "type": "any",
+      "initialValue": "document.getElementById(\"dom-test\"),c=document.getElementById(\"output-area\")"
+    },
+    {
+      "name": "u",
+      "type": "any",
+      "initialValue": "document.getElementById(\"process-text\"),d=document.getElementById(\"text-input\")"
+    },
+    {
+      "name": "o",
+      "type": "any",
+      "initialValue": "d.value,n=m(o)"
+    },
+    {
+      "name": "o",
+      "type": "any",
+      "initialValue": "document.getElementById(\"output-area\")"
+    }
+  ],
+  "detectedHostFunctions": [
+    {
+      "name": "dom_get_element_by_id",
+      "inputs": [
+        "ptr"
+      ],
+      "outputs": [
+        "i32"
+      ],
+      "description": "Get DOM element by ID, returns 1 if found, 0 if not"
+    },
+    {
+      "name": "dom_create_element",
+      "inputs": [
+        "ptr"
+      ],
+      "outputs": [
+        "i32"
+      ],
+      "description": "Create DOM element by tag name, returns element ID if successful"
+    },
+    {
+      "name": "dom_add_event_listener",
+      "inputs": [
+        "ptr",
+        "ptr",
+        "ptr"
+      ],
+      "outputs": [
+        "i32"
+      ],
+      "description": "Add event listener to DOM element"
+    },
+    {
+      "name": "dom_set_text_content",
+      "inputs": [
+        "ptr",
+        "ptr"
+      ],
+      "outputs": [
+        "i32"
+      ],
+      "description": "Set text content of DOM element"
+    },
+    {
+      "name": "console_log",
+      "inputs": [
+        "ptr"
+      ],
+      "outputs": [],
+      "description": "Console logging from WASM"
+    },
+    {
+      "name": "fetch_request",
+      "inputs": [
+        "ptr",
+        "ptr"
+      ],
+      "outputs": [
+        "i32"
+      ],
+      "description": "Perform HTTP fetch request"
+    }
+  ]
+}

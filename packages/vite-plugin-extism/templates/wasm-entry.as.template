@@ -1,0 +1,40 @@
+// Generated Extism AssemblyScript module with DOM bindings
+import { Host, Config, Var, Memory } from '@extism/as-pdk'
+
+// External function for getting memory length
+declare function length(offset: u64): u64
+
+// Required abort function for AssemblyScript/Extism
+function myAbort(
+  message: string | null,
+  fileName: string | null,
+  lineNumber: u32,
+  columnNumber: u32
+): void {
+  if (message) {
+    Host.outputString("ABORT: " + message)
+  }
+}
+
+{{DOM_BINDINGS}}
+
+// Simple test function that doesn't require host functions
+export function simple_test(): string {
+  return "WASM is working!"
+}
+
+// Addition test without host functions
+export function add_numbers(a: i32, b: i32): i32 {
+  return a + b
+}
+
+// Main entry point for WASM module - transpiled from actual TypeScript
+export function main(): i32 {
+{{INIT_CODE}}
+  
+  return 0
+}
+
+{{EXTRACTED_FUNCTIONS}}
+
+{{EXPORTED_FUNCTIONS}}

@@ -1,41 +1,67 @@
 #!/bin/bash
 
-echo "🧪 Testing the Example Project"
-echo "================================"
+echo "🧪 Testing the Example Project with Separate Builds"
+echo "=================================================="
 echo ""
 
-# Check if files exist
+# Test separate builds
+echo "🔨 Building both versions..."
+npm run build:all --silent
+
+echo ""
 echo "📁 Checking generated files:"
-if [ -f "dist/example.wasm" ]; then
-    echo "✅ dist/example.wasm - $(du -h dist/example.wasm | cut -f1)"
+
+# Check normal build
+echo "📦 Normal Vite Build (dist-normal/):"
+if [ -f "dist-normal/index.html" ]; then
+    echo "✅ dist-normal/index.html - $(du -h dist-normal/index.html | cut -f1)"
 else
-    echo "❌ dist/example.wasm - Missing"
+    echo "❌ dist-normal/index.html - Missing"
 fi
 
-if [ -f "dist/manifest.json" ]; then
-    echo "✅ dist/manifest.json - $(du -h dist/manifest.json | cut -f1)"
+if [ -d "dist-normal/assets" ]; then
+    echo "✅ dist-normal/assets/ - $(du -sh dist-normal/assets | cut -f1)"
 else
-    echo "❌ dist/manifest.json - Missing"
+    echo "❌ dist-normal/assets/ - Missing"
 fi
 
-if [ -f "dist/index.html" ]; then
-    echo "✅ dist/index.html - $(du -h dist/index.html | cut -f1)"
+echo ""
+echo "🔌 Plugin-Enhanced Build (dist-wasm/):"
+if [ -f "dist-wasm/example.wasm" ]; then
+    echo "✅ dist-wasm/example.wasm - $(du -h dist-wasm/example.wasm | cut -f1)"
 else
-    echo "❌ dist/index.html - Missing"
+    echo "❌ dist-wasm/example.wasm - Missing"
+fi
+
+if [ -f "dist-wasm/manifest.json" ]; then
+    echo "✅ dist-wasm/manifest.json - $(du -h dist-wasm/manifest.json | cut -f1)"
+else
+    echo "❌ dist-wasm/manifest.json - Missing"
+fi
+
+if [ -f "dist-wasm/preview.html" ]; then
+    echo "✅ dist-wasm/preview.html - $(du -h dist-wasm/preview.html | cut -f1)"
+else
+    echo "❌ dist-wasm/preview.html - Missing"
 fi
 
 echo ""
 echo "📋 Manifest content:"
-cat dist/manifest.json
+if [ -f "dist-wasm/manifest.json" ]; then
+    cat dist-wasm/manifest.json
+else
+    echo "❌ Manifest file not found"
+fi
 echo ""
 
-echo "🌐 Servers available:"
-echo "   📦 WASM Version: http://localhost:3002"
-echo "   🔧 TypeScript Version: http://localhost:5173"
+echo "🌐 Available servers:"
+echo "   📦 Normal Version: http://localhost:5173 (npm run preview:normal)"
+echo "   � WASM Version: http://localhost:3001 (npm run preview:wasm)"
+echo "   🚀 Both Servers: npm run serve:all"
 echo ""
 echo "🧪 Test both versions to compare functionality:"
 echo "   1. Click buttons to test event handling"
 echo "   2. Enter text to test input processing" 
 echo "   3. Check browser console for WASM output"
 echo ""
-echo "✅ Example project setup complete!"
+echo "✅ Example project setup complete with separate build outputs!"
