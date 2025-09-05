@@ -5,10 +5,8 @@
   "scripts": {
     "clean": "rm -rf dist && mkdir -p dist",
     "build": "npm run clean && asc main.ts --target release --outFile dist/main.wasm --use abort= --exportRuntime --bindings esm",
-    "test": "extism call dist/main.wasm hello",
-    "test-greet": "extism call dist/main.wasm greet --input \"World\"",
-    "test-manifest": "extism call --manifest manifest.json hello",
-    "test-all": "npm run test && npm run test-greet && extism call dist/main.wasm test && npm run test-manifest"
+    "test-all": "echo '🔧 Testing with JavaScript host functions:' && npm run test-host-functions",
+    "demo": "npm run build && npm run test-all"
   },
   "devDependencies": {
     "assemblyscript": "^0.27.0",

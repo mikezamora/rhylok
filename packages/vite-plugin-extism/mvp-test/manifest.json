@@ -7,5 +7,6 @@
   "memory": {
     "max_pages": 20
   },
-  "config": {}
+  "config": {},
+  "allowed_hosts": ["*"]
 }
