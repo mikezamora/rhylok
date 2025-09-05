@@ -3,20 +3,27 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "build:wasm": "vite build --config vite.config.extism.ts",
-    "demo:host": "node host-demo.js",
-    "preview": "vite preview"
+    "build:wasm": "npm run plugin:build && vite build --config vite.config.wasm.ts",
+    "preview": "vite preview",
+    "preview:wasm": "npx serve dist-wasm -p 3000 --cors",
+    "start:wasm": "npm run build:wasm && npm run preview:wasm",
+    "plugin:build": "cd packages/vite-plugin-extism && npm run build",
+    "plugin:dev": "cd packages/vite-plugin-extism && npm run dev",
+    "plugin:test": "cd packages/vite-plugin-extism && npm test"
   },
   "devDependencies": {
-    "assemblyscript": "^0.28.5",
     "typescript": "~5.8.3",
     "vite": "^7.1.2"
   },
   "dependencies": {
     "@types/animejs": "^3.1.13",
-    "animejs": "^4.1.3"
+    "animejs": "^4.1.3",
+    "serve": "^14.2.5"
   }
 }

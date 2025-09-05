@@ -111,7 +111,16 @@ npm run build
 npm run preview
 \`\`\`
 
+### WASM Compilation (Optional)
+
+The project includes a Vite plugin that can compile the game to WebAssembly using Extism:
+\`\`\`bash
+npm run build:wasm
+\`\`\`
+This generates a WASM module in \`dist-wasm/\` with an Extism-compatible preview. See \`packages/vite-plugin-extism/\` for more details on the plugin.
+
 ### Project Structure
+
 \`\`\`
 src/
 ├── game/
@@ -137,7 +146,7 @@ Requires Web Audio API support for audio analysis and playback.
 ## Tips for Best Experience
 
 1. **Audio Quality**: Higher quality audio files (48kHz, stereo) provide better beat detection
-2. **Sensitivity Tuning**: 
+2. **Sensitivity Tuning**:
    - Low sensitivity (0.5-0.8): Fewer, more obvious beats
    - High sensitivity (1.2-2.0): More complex, challenging patterns
 3. **Song Selection**: Songs with clear rhythmic patterns work best
