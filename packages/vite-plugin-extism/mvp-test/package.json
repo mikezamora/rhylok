@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf dist && mkdir -p dist",
-    "build": "npm run clean && asc main.ts --target release --outFile dist/main.wasm --use abort= --exportRuntime --bindings esm",
+    "build": "npm run clean && asc main.ts --outFile dist/main.wasm --use abort=main/myAbort",
     "test-host-functions": "tsx host-test.ts",
     "test-all": "echo '🔧 Testing with TypeScript host functions:' && npm run test-host-functions",
     "demo": "npm run build && npm run test-all"
