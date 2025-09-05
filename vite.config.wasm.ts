@@ -31,14 +31,13 @@ export default defineConfig({
         timeout_ms: 10000
       },
       
-      // AssemblyScript compilation options
+      // AssemblyScript compilation options for Extism PDK
       assemblyscriptOptions: {
         debug: false,
         optimizeLevel: 3,
         runtime: 'minimal',
         flags: [
-          '--exportTable',
-          '--memoryBase=0'
+          // Only PDK-recommended flags - the PDK handles exports internally
         ]
       },
       
@@ -70,5 +69,8 @@ export default defineConfig({
         }
       ]
     })
-  ]
+  ],
+  build: {
+    outDir: 'dist-wasm'
+  }
 })

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Extism Plugin Example</title>
+</head>
+
+<body>
+    <div id="app">
+        <h1>Extism WASM Plugin Example</h1>
+        <p>This is a minimal example project to test the vite-plugin-extism.</p>
+
+        <div class="controls">
+            <button id="test-button">Click Me (WASM)</button>
+            <button id="dom-test">Test DOM Manipulation</button>
+            <input type="text" id="text-input" placeholder="Enter some text..." />
+            <button id="process-text">Process Text</button>
+        </div>
+
+        <div class="output">
+            <h3>Output:</h3>
+            <div id="output-area">Ready to test WASM functionality...</div>
+        </div>
+
+        <div class="console">
+            <h3>Console:</h3>
+            <div id="console-output"></div>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

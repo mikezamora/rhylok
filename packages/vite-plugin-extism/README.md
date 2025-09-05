@@ -43,7 +43,7 @@ interface ExtismPluginOptions {
   entry?: string                    // default: 'main.ts'
   
   // Output configuration
-  outDir?: string                   // default: 'dist-extism'
+  outDir?: string                   // default: uses Vite's build.outDir
   wasmFileName?: string             // default: 'plugin.wasm'
   manifestFileName?: string         // default: 'manifest.json'
   

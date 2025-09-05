@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rhylok - Rhythm Game - WASM Edition</title>
+</head>
+
+<body>
+  <div id="app">
+    <div id="game-container">
+      <div id="ui-overlay">
+        <div id="score-display">Score: <span id="score">0</span></div>
+        <div id="combo-display">Combo: <span id="combo">0</span></div>
+        <div id="controls-info">
+          Controls: A S D F - J K L ; | SPACE: Play/Pause
+        </div>
+        <button id="hide-controls-btn" title="Hide/Show Controls">[SETTINGS]</button>
+      </div>
+      <canvas id="game-canvas"></canvas>
+      <div id="control-panel">
+        <div class="control-row">
+          <div class="control-group">
+            <label for="sensitivity">Beat Sensitivity:</label>
+            <input type="range" id="sensitivity" min="0.1" max="5.0" step="0.1" value="1.0">
+            <span id="sensitivity-value">1.0</span>
+          </div>
+          <div class="control-group">
+            <label for="playback-speed">Playback Speed:</label>
+            <input type="range" id="playback-speed" min="0.5" max="2.0" step="0.1" value="1.0">
+            <span id="playback-speed-value">1.0x</span>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <label for="instrument-focus">Instrument Focus:</label>
+            <select id="instrument-focus">
+              <option value="all">All Frequencies</option>
+              <option value="bass">Bass (20-250Hz)</option>
+              <option value="drums">Drums (60-150Hz)</option>
+              <option value="vocals">Vocals (300-3kHz)</option>
+              <option value="treble">Treble (2-20kHz)</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+          <div class="control-group" id="custom-freq-group" style="display: none;">
+            <label for="custom-freq-min">Min Hz:</label>
+            <input type="number" id="custom-freq-min" value="60" min="20" max="20000">
+            <label for="custom-freq-max">Max Hz:</label>
+            <input type="number" id="custom-freq-max" value="150" min="20" max="20000">
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <label for="fretboard-style">Fretboard Style:</label>
+            <select id="fretboard-style">
+              <option value="2d">Classic 2D</option>
+              <option value="3d">3D Vector Oscilloscope</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label for="difficulty-mode">Difficulty Mode:</label>
+            <select id="difficulty-mode">
+              <option value="normal">Normal</option>
+              <option value="hard">Hard</option>
+              <option value="extreme">Extreme</option>
+              <option value="intensity">Intensity Master</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>
+              <input type="checkbox" id="time-signature-follow">
+              Follow Time Signature Changes
+            </label>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <button id="auto-detect-sensitivity">Auto-Detect Optimal Sensitivity</button>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <input type="file" id="audio-file" accept="audio/*">
+            <button id="play-pause">Play/Pause</button>
+            <button id="microphone-toggle">MIC: Use Microphone</button>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-group">
+            <details>
+              <summary>Advanced Settings</summary>
+              <div style="margin-top: 10px;">
+                <button id="clear-storage" style="background: #f44336; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
+                  Clear All Saved Data
+                </button>
+                <p style="font-size: 12px; color: #888; margin: 5px 0 0 0;">
+                  This will clear all saved settings, cached beats, and song data.
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Arial', sans-serif;
+  background: linear-gradient(135deg, #1e1e1e, #2d2d30);
+  color: white;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#app {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#ui-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#hide-controls-btn {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #ff6b6b;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  z-index: 1000;
+}
+
+#hide-controls-btn:hover {
+  background: rgba(255, 107, 107, 0.2);
+  transform: scale(1.1);
+}
+
+#score-display,
+#combo-display {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 10px 15px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+#controls-info {
+  background: rgba(0, 0, 0, 0.5);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+#game-canvas {
+  flex: 1;
+  background: linear-gradient(180deg, #0f0f23, #1a1a2e);
+  border: 2px solid #333;
+  cursor: none;
+}
+
+#control-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  align-items: center;
+  z-index: 100;
+  min-width: 800px;
+  max-width: 90vw;
+}
+
+.control-row {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.control-group label {
+  font-size: 14px;
+  color: #ccc;
+  min-width: fit-content;
+}
+
+#sensitivity,
+#playback-speed {
+  width: 120px;
+  accent-color: #ff6b6b;
+}
+
+#sensitivity-value,
+#playback-speed-value {
+  font-weight: bold;
+  color: #ff6b6b;
+  min-width: 35px;
+  text-align: center;
+}
+
+#instrument-focus,
+#difficulty-mode {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 5px 8px;
+  color: white;
+  font-size: 12px;
+  min-width: 120px;
+}
+
+#custom-freq-min,
+#custom-freq-max {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 4px 6px;
+  color: white;
+  font-size: 12px;
+  width: 80px;
+}
+
+input[type="checkbox"] {
+  accent-color: #ff6b6b;
+  transform: scale(1.2);
+}
+
+#audio-file {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 5px;
+  color: white;
+  font-size: 12px;
+}
+
+#play-pause {
+  background: #ff6b6b;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#play-pause:hover {
+  background: #ff5252;
+}
+
+#play-pause:active {
+  transform: scale(0.95);
+}
+
+/* Hit effect animation */
+.hit-effect {
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  animation: hitEffect 0.3s ease-out;
+}
+
+@keyframes hitEffect {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+</style>
+<script type="module" src="./preview-bundle.js"></script>
+</body>
+
+</html>

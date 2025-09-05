@@ -1,0 +1,19 @@
+{
+  "name": "extism-plugin-example",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "preview:wasm": "serve dist -p 3001"
+  },
+  "devDependencies": {
+    "vite": "^7.1.2",
+    "typescript": "~5.8.3",
+    "vite-plugin-extism": "workspace:*"
+  },
+  "dependencies": {
+    "@extism/extism": "^2.0.0-rc13"
+  }
+}

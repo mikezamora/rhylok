@@ -1,12 +1,14 @@
 {
   "name": "vite-plugin-extism",
   "version": "1.0.0",
+  "type": "module",
   "description": "A Vite plugin to compile TypeScript projects to Extism WASM modules",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist",
-    "templates"
+    "templates",
+    "example"
   ],
   "scripts": {
     "build": "tsc",
@@ -29,6 +31,7 @@
     "vite": "^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0"
   },
   "dependencies": {
+    "@extism/as-pdk": "^1.0.0",
     "@extism/extism": "^2.0.0-rc13",
     "assemblyscript": "^0.28.5"
   },
