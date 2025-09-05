@@ -5,12 +5,16 @@
   "scripts": {
     "clean": "rm -rf dist && mkdir -p dist",
     "build": "npm run clean && asc main.ts --target release --outFile dist/main.wasm --use abort= --exportRuntime --bindings esm",
-    "test-all": "echo '🔧 Testing with JavaScript host functions:' && npm run test-host-functions",
+    "test-host-functions": "tsx host-test.ts",
+    "test-all": "echo '🔧 Testing with TypeScript host functions:' && npm run test-host-functions",
     "demo": "npm run build && npm run test-all"
   },
   "devDependencies": {
     "assemblyscript": "^0.27.0",
-    "@extism/as-pdk": "^1.0.0"
+    "@extism/as-pdk": "^1.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2",
+    "@types/node": "^22.5.5"
   },
   "description": "",
   "main": "index.js",
