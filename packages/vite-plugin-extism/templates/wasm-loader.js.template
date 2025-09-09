@@ -184,9 +184,10 @@ class {{ADAPTER_CLASS_NAME}} {
                   element.addEventListener(eventType, async () => {
                     console.log(`🖱️ ${eventType} triggered, calling ${handlerName}`)
                     try {
-                      const result = await this.plugin.call(handlerName)
+                      const result = await this.plugin.call(handlerName, new TextEncoder().encode(''))
                       if (result) {
-                        console.log(`✅ Handler result:`, result.text())
+                        const output = new TextDecoder().decode(result.buffer)
+                        console.log(`✅ Handler result:`, output)
                       }
                     } catch (error) {
                       console.log(`❌ WASM handler error:`, error.message)
@@ -228,9 +229,9 @@ class {{ADAPTER_CLASS_NAME}} {
       // Initialize the WASM module
       try {
         console.log('🚀 Calling WASM main function...')
-        const result = await this.plugin.call('main')
+        const result = await this.plugin.call('main', new TextEncoder().encode(''))
         if (result) {
-          const output = result.text()
+          const output = new TextDecoder().decode(result.buffer)
           console.log('✅ WASM main result:', output)
         }
       } catch (error) {
@@ -242,6 +243,24 @@ class {{ADAPTER_CLASS_NAME}} {
       
     } catch (error) {
       console.error('❌ Failed to load WASM plugin:', error)
+    }
+  }
+
+  // Helper method for calling WASM functions with proper input/output handling
+  async callWasmFunction(funcName, input = '') {
+    if (!this.plugin || !this.isInitialized) {
+      throw new Error('WASM plugin not initialized')
+    }
+    
+    try {
+      const result = await this.plugin.call(funcName, new TextEncoder().encode(input))
+      if (result) {
+        return new TextDecoder().decode(result.buffer)
+      }
+      return ''
+    } catch (error) {
+      console.error(`❌ Error calling WASM function ${funcName}:`, error.message)
+      throw error
     }
   }
 
@@ -271,15 +290,13 @@ class {{ADAPTER_CLASS_NAME}} {
       if (userInput) {
         userInput.addEventListener('input', async (e) => {
           try {
-            const result = await this.plugin.call('processUserInput', e.target.value)
-            if (result) {
-              console.log('✅ Input processing result:', result.text())
-              
-              // Display result in output area
-              const outputArea = document.getElementById('output-area')
-              if (outputArea) {
-                outputArea.textContent = `Processed: ${result.text()}`
-              }
+            const result = await this.callWasmFunction('processUserInput', e.target.value)
+            console.log('✅ Input processing result:', result)
+            
+            // Display result in output area
+            const outputArea = document.getElementById('output-area')
+            if (outputArea) {
+              outputArea.textContent = `Processed: ${result}`
             }
           } catch (error) {
             console.log('❌ WASM input processing error:', error.message)

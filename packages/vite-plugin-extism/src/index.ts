@@ -311,15 +311,7 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
   async function generatePreviewFile(rootDir: string, outDir: string, sourceHtml: string, previewFileName: string, manifestData: ExtismManifest, wasmFileName: string, hostFunctions: any[]) {
     await generatePreviewHtml(rootDir, outDir, sourceHtml, previewFileName, manifestData, wasmFileName, hostFunctions)
     
-    // Create index.html as a copy of preview.html for easy serving
-    const previewPath = path.resolve(outDir, previewFileName)
-    const indexPath = path.resolve(outDir, 'index.html')
-    try {
-      await fs.copyFile(previewPath, indexPath)
-      console.log('📝 Created index.html from preview.html')
-    } catch (error) {
-      console.warn('⚠️  Could not create index.html: ' + error)
-    }
+    // Note: index.html copy will be done in writeBundle hook to avoid clearBundle interference
   }
 
   function clearBundle(bundle: OutputBundle, wasmFileName: string, manifestFileName: string) {
@@ -374,6 +366,22 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
 
       // Clear the bundle to prevent normal output, but preserve our WASM assets
       clearBundle(bundle, wasmFileName, manifestFileName)
+    },
+
+    async writeBundle(outputOptions) {
+      // After all bundle operations are complete, copy preview.html to index.html
+      if (generatePreview) {
+        const outDir = outputOptions.dir || resolvedOutDir
+        const previewPath = path.resolve(outDir, previewFileName)
+        const indexPath = path.resolve(outDir, 'index.html')
+        
+        try {
+          await fs.copyFile(previewPath, indexPath)
+          console.log('📝 Created index.html from preview.html (same contents)')
+        } catch (error) {
+          console.warn('⚠️  Could not create index.html from preview.html: ' + error)
+        }
+      }
     }
   }
 }

@@ -11,11 +11,15 @@
     "preview": "vite preview",
     "preview:wasm": "vite preview  --config vite.config.wasm.ts",
     "build:all": "npm run build && npm run build:wasm",
-    "serve:all": "npx concurrently \"npm run preview\" \"npm run preview:wasm\""
+    "serve:all": "npx concurrently \"npm run preview\" \"npm run preview:wasm\"",
+    "test": "cd e2e && npm test",
+    "test:debug": "cd e2e && npm run test:debug",
+    "test:ui": "cd e2e && npm run test:ui",
+    "test:install": "cd e2e && npm run install"
   },
   "devDependencies": {
-    "vite": "^7.1.2",
     "typescript": "~5.8.3",
+    "vite": "^7.1.2",
     "vite-plugin-extism": "workspace:*"
   },
   "dependencies": {
