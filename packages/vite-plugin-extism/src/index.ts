@@ -126,6 +126,7 @@ interface ExtismManifest {
     url?: string   // URL to WASM file
     name?: string  // optional name
   }>
+  main?: string  // name of the main module (required when multiple modules)
   memory?: {
     max_pages?: number
     max_var_bytes?: number
@@ -176,15 +177,13 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
       // Use the WASM-specific entry file
       console.log('📄 Using WASM entry file: ' + path.relative(config.root, wasmEntryPath))
       wasmCode = await fs.readFile(wasmEntryPath, 'utf-8')
-    } else if (entryInfo.entryChunk) {
-      // Transform the bundled code
-      console.log('🔄 Transforming bundled code for WASM compatibility')
-      wasmCode = entryInfo.entryChunk.code
     } else {
-      // Fallback: read the entry file directly
-      const fallbackEntryPath = path.resolve(entryInfo.srcDir, entryInfo.entry)
-      console.log('📄 Reading entry file directly: ' + path.relative(config.root, fallbackEntryPath))
-      wasmCode = await fs.readFile(fallbackEntryPath, 'utf-8')
+      // DON'T use the bundled code - it's minified and unparseable!
+      // Instead, read the original source file directly
+      const sourceEntryPath = path.resolve(entryInfo.srcDir, entryInfo.entry)
+      console.log('📄 Reading original source file for transpilation: ' + path.relative(config.root, sourceEntryPath))
+      wasmCode = await fs.readFile(sourceEntryPath, 'utf-8')
+      console.log('📄 Source code length: ' + wasmCode.length + ' characters')
     }
 
     // Variables for debugging
@@ -196,7 +195,9 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
       wasmCode = await options.transform(wasmCode, bundle)
     } else {
       // Default transformation to make code AssemblyScript compatible
+      console.log('🔍 Analyzing source TypeScript code...')
       const analysis = analyzeTypeScriptCode(wasmCode)
+      console.log('🔄 Transpiling to AssemblyScript...')
       const transformResult = await transpileToAssemblyScript(wasmCode, analysis, config.root)
       wasmCode = transformResult.assemblyScriptCode
       
@@ -280,8 +281,7 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
     // Create Extism manifest
     const manifestData: ExtismManifest = {
       wasm: [{
-        path: wasmFileName,
-        name: path.basename(wasmFileName, '.wasm')
+        url: `./${wasmFileName}`  // Use URL for browser compatibility, let Extism auto-assign "main" as the last module
       }],
       ...manifest
     }
@@ -492,15 +492,15 @@ class ElementHandle {
       case 'document\\.getElementById\\(':
         bindingParts.push(`
 // DOM element access using external host functions
-@external("extism:host/env", "dom_get_element_by_id")
-declare function dom_get_element_by_id(idOffset: u32): i32
+@external("extism:host/user", "dom_get_element_by_id")
+declare function dom_get_element_by_id(idPtr: u64, idLen: u64): i32
 
 function getElementById(id: string): ElementHandle | null {
   Host.outputString("🔧 AssemblyScript getElementById called with: '" + id + "'")
   Host.outputString("🔧 String length: " + id.length.toString())
   const idMem = Memory.allocateString(id)
   Host.outputString("🔧 Memory allocated at offset: " + idMem.offset.toString())
-  const result = dom_get_element_by_id(u32(idMem.offset))
+  const result = dom_get_element_by_id(idMem.offset, idMem.length)
   Host.outputString("🔧 Host function returned: " + result.toString())
   if (result > 0) {
     return new ElementHandle(id)
@@ -516,7 +516,7 @@ export function dom_get_element(): string {
 
         bindings.hostFunctions.push({
           name: 'dom_get_element_by_id',
-          inputs: ['ptr'],
+          inputs: ['ptr', 'ptr'],
           outputs: ['i32'],
           description: 'Get DOM element by ID, returns 1 if found, 0 if not'
         })
@@ -525,13 +525,13 @@ export function dom_get_element(): string {
       case '\\.textContent\\s*=':
         bindingParts.push(`
 // Text content setting using external host function
-@external("extism:host/env", "dom_set_text_content")
-declare function dom_set_text_content(elementIdOffset: u32, textOffset: u32): i32
+@external("extism:host/user", "dom_set_text_content")
+declare function dom_set_text_content(elementIdPtr: u64, elementIdLen: u64, textPtr: u64, textLen: u64): i32
 
 function setTextContent(element: ElementHandle, text: string): void {
   const elementIdMem = Memory.allocateString(element.id)
   const textMem = Memory.allocateString(text)
-  dom_set_text_content(u32(elementIdMem.offset), u32(textMem.offset))
+  dom_set_text_content(elementIdMem.offset, elementIdMem.length, textMem.offset, textMem.length)
 }`)
 
         exportParts.push(`
@@ -542,7 +542,7 @@ export function dom_set_text(): string {
 
         bindings.hostFunctions.push({
           name: 'dom_set_text_content',
-          inputs: ['ptr', 'ptr'],
+          inputs: ['ptr', 'ptr', 'ptr', 'ptr'],
           outputs: ['i32'],
           description: 'Set text content of DOM element'
         })
@@ -551,14 +551,14 @@ export function dom_set_text(): string {
       case '\\.addEventListener\\(':
         bindingParts.push(`
 // Event listener setup using external host function
-@external("extism:host/env", "dom_add_event_listener")
-declare function dom_add_event_listener(elementIdOffset: u32, eventOffset: u32, handlerOffset: u32): i32
+@external("extism:host/user", "dom_add_event_listener")
+declare function dom_add_event_listener(elementIdPtr: u64, elementIdLen: u64, eventPtr: u64, eventLen: u64, handlerPtr: u64, handlerLen: u64): i32
 
 function addEventListener(element: ElementHandle, event: string, handler: string): void {
   const elementIdMem = Memory.allocateString(element.id)
   const eventMem = Memory.allocateString(event)
   const handlerMem = Memory.allocateString(handler)
-  dom_add_event_listener(u32(elementIdMem.offset), u32(eventMem.offset), u32(handlerMem.offset))
+  dom_add_event_listener(elementIdMem.offset, elementIdMem.length, eventMem.offset, eventMem.length, handlerMem.offset, handlerMem.length)
 }`)
 
         exportParts.push(`
@@ -569,7 +569,7 @@ export function dom_add_event_listener_test(): string {
 
         bindings.hostFunctions.push({
           name: 'dom_add_event_listener',
-          inputs: ['ptr', 'ptr', 'ptr'],
+          inputs: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr', 'ptr'],
           outputs: ['i32'],
           description: 'Add event listener to DOM element'
         })
@@ -578,12 +578,12 @@ export function dom_add_event_listener_test(): string {
       case 'document\\.createElement\\(':
         bindingParts.push(`
 // DOM element creation using external host function
-@external("extism:host/env", "dom_create_element")
-declare function dom_create_element(tagNameOffset: u32): i32
+@external("extism:host/user", "dom_create_element")
+declare function dom_create_element(tagNamePtr: u64, tagNameLen: u64): i32
 
 function createElement(tagName: string): ElementHandle | null {
   const tagNameMem = Memory.allocateString(tagName)
-  const result = dom_create_element(u32(tagNameMem.offset))
+  const result = dom_create_element(tagNameMem.offset, tagNameMem.length)
   if (result > 0) {
     return new ElementHandle(tagName + "_" + result.toString())
   }
@@ -598,7 +598,7 @@ export function dom_create_element_test(): string {
 
         bindings.hostFunctions.push({
           name: 'dom_create_element',
-          inputs: ['ptr'],
+          inputs: ['ptr', 'ptr'],
           outputs: ['i32'],
           description: 'Create DOM element by tag name, returns element ID if successful'
         })
@@ -607,13 +607,13 @@ export function dom_create_element_test(): string {
       case 'fetch\\(':
         bindingParts.push(`
 // Fetch API implementation using external host function
-@external("extism:host/env", "fetch_request")
-declare function fetch_request(urlOffset: u32, methodOffset: u32): i32
+@external("extism:host/user", "fetch_request")
+declare function fetch_request(urlPtr: u64, urlLen: u64, methodPtr: u64, methodLen: u64): i32
 
 function fetch(url: string, options: string = "GET"): i32 {
   const urlMem = Memory.allocateString(url)
   const methodMem = Memory.allocateString(options)
-  return fetch_request(u32(urlMem.offset), u32(methodMem.offset))
+  return fetch_request(urlMem.offset, urlMem.length, methodMem.offset, methodMem.length)
 }`)
 
         exportParts.push(`
@@ -624,7 +624,7 @@ export function fetch_test(): string {
 
         bindings.hostFunctions.push({
           name: 'fetch_request',
-          inputs: ['ptr', 'ptr'],
+          inputs: ['ptr', 'ptr', 'ptr', 'ptr'],
           outputs: ['i32'],
           description: 'Perform HTTP fetch request'
         })
@@ -632,9 +632,14 @@ export function fetch_test(): string {
 
       case 'console\\.log\\(':
         bindingParts.push(`
-// Console log implementation using Host.outputString for CLI compatibility
+// Console logging host function
+@external("extism:host/user", "console_log")
+declare function console_log(messagePtr: u64, messageLen: u64): void
+
+// Console log implementation using host function
 function log(message: string): void {
-  Host.outputString(message)
+  const messageMem = Memory.allocateString(message)
+  console_log(messageMem.offset, messageMem.length)
 }
 
 // String utility functions for AssemblyScript
@@ -660,7 +665,7 @@ function toUpperCase(input: string): string {
 }`)
         bindings.hostFunctions.push({
           name: 'console_log',
-          inputs: ['ptr'],
+          inputs: ['ptr', 'ptr'],
           outputs: [],
           description: 'Console logging from WASM'
         })
@@ -752,7 +757,6 @@ async function transpileToAssemblyScript(code: string, analysis: CodeAnalysis, c
   
   // Replace template variables
   const assemblyScriptCode = template
-    .replace(/\{\{CODE_LENGTH\}\}/g, code.length.toString())
     .replace(/\{\{INIT_CODE\}\}/g, initCode)
     .replace(/\{\{EXTRACTED_FUNCTIONS\}\}/g, extractedFunctions)
     .replace(/\{\{DOM_BINDINGS\}\}/g, domBindings.assemblyScriptBindings)
@@ -770,22 +774,87 @@ function extractAndTranspileFunctions(code: string): string {
   // Skip functions that are already defined in the template
   const templateFunctions = new Set(['reverseAndJoinString', 'getCurrentTimeString', 'myAbort'])
   
-  // Extract function declarations using regex
-  const functionRegex = /function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(([^)]*)\)\s*:\s*([^{]+)\s*\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g
+  // Better function extraction that handles nested braces properly
+  const lines = code.split('\n')
+  let i = 0
   
-  let match
-  while ((match = functionRegex.exec(code)) !== null) {
-    const functionName = match[1]
-    const params = match[2].trim()
-    const returnType = match[3].trim()
-    const body = match[4]
+  while (i < lines.length) {
+    const line = lines[i].trim()
     
-    // Skip functions already in template and non-exported functions
-    if (!templateFunctions.has(functionName) && 
-        (code.includes('export { ' + functionName) || code.includes('export function ' + functionName))) {
-      const transpiledFunction = transpileFunction(functionName, params, returnType, body)
-      functions.push(transpiledFunction)
+    // Look for function declarations
+    const functionMatch = line.match(/^function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(([^)]*)\)\s*:\s*([^{]+)\s*\{?/)
+    if (functionMatch) {
+      const functionName = functionMatch[1]
+      const params = functionMatch[2].trim()
+      const returnType = functionMatch[3].trim()
+      
+      // Skip functions already in template
+      if (templateFunctions.has(functionName)) {
+        i++
+        continue
+      }
+      
+      // Check if this function is exported
+      const isExported = code.includes('export { ' + functionName) || 
+                        code.includes('export function ' + functionName) ||
+                        // Check for multi-function exports like "export { func1, func2 }"
+                        new RegExp('export\\s*\\{[^}]*\\b' + functionName + '\\b[^}]*\\}').test(code)
+      if (!isExported) {
+        i++
+        continue
+      }
+      
+      // Extract the full function body including nested braces
+      let braceCount = 0
+      let functionStarted = false
+      let functionBody = ''
+      let startIndex = i
+      
+      // Count braces to find the end of the function
+      for (let j = i; j < lines.length; j++) {
+        const currentLine = lines[j]
+        
+        // Count opening and closing braces
+        for (let k = 0; k < currentLine.length; k++) {
+          if (currentLine[k] === '{') {
+            braceCount++
+            functionStarted = true
+          } else if (currentLine[k] === '}') {
+            braceCount--
+          }
+        }
+        
+        // Add this line to the function body
+        if (j === startIndex) {
+          // First line - only take the part after the opening brace
+          const braceIndex = currentLine.indexOf('{')
+          if (braceIndex !== -1) {
+            functionBody += currentLine.substring(braceIndex + 1) + '\n'
+          }
+        } else if (braceCount > 0) {
+          // Middle lines
+          functionBody += currentLine + '\n'
+        } else if (functionStarted && braceCount === 0) {
+          // Last line - only take the part before the closing brace
+          const braceIndex = currentLine.lastIndexOf('}')
+          if (braceIndex !== -1) {
+            functionBody += currentLine.substring(0, braceIndex)
+          }
+          break
+        }
+        
+        // Update outer loop index
+        i = j
+      }
+      
+      // Transpile this function
+      if (functionBody.trim()) {
+        const transpiledFunction = transpileFunction(functionName, params, returnType, functionBody.trim())
+        functions.push(transpiledFunction)
+        console.log('✅ Extracted and transpiled function: ' + functionName)
+      }
     }
+    i++
   }
   
   return functions.join('\n\n')
@@ -861,7 +930,7 @@ function convertFunctionBody(body: string): string {
   
   // Convert string methods - specifically the example we have
   converted = converted.replace(/(\w+)\.split\(([^)]+)\)\.reverse\(\)\.join\(([^)]+)\)\.toUpperCase\(\)/g, 
-    'reverseAndJoinString($1)')
+    'toUpperCase(reverseString($1))')
   
   // Add proper indentation
   return converted.split('\n').map(function(line) { 
@@ -873,28 +942,114 @@ function convertFunctionBody(body: string): string {
 function createInitializationFromCode(code: string, analysis: CodeAnalysis): string {
   const initLines: string[] = []
   
-  // Extract top-level console.log statements
-  const topLevelStatements = code.split('\n').filter(function(line) {
+  console.log('🔄 Creating initialization from TypeScript code...')
+  
+  // Split the code into lines and filter out function definitions and exports
+  const lines = code.split('\n')
+  const topLevelStatements: string[] = []
+  
+  let insideFunction = false
+  let braceCount = 0
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
     const trimmed = line.trim()
-    return trimmed.startsWith('console.log(') && 
-           !trimmed.includes('function') && 
-           !line.includes('  ') // Not indented (top-level)
-  })
-  
-  topLevelStatements.slice(0, 3).forEach(function(statement) {
-    const cleaned = statement.trim().replace(/console\.log\(/, 'log(')
-    initLines.push('  ' + cleaned)
-  })
-  
-  // Add DOM initialization based on detected APIs
-  if (analysis.domAPIs.has('document\\.getElementById\\(')) {
-    initLines.push('  // Initialize DOM elements')
-    initLines.push('  let appElement = getElementById("app")')
-    initLines.push('  if (appElement != null) {')
-    initLines.push('    log("Found app element!")')
-    initLines.push('  }')
+    
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) continue
+    
+    // Skip import/export statements
+    if (trimmed.startsWith('import ') || trimmed.startsWith('export ')) continue
+    
+    // Track if we're inside a function
+    if (trimmed.includes('function ') || trimmed.match(/^\s*\w+\s*\([^)]*\)\s*\{/)) {
+      insideFunction = true
+    }
+    
+    // Count braces to track function boundaries
+    const openBraces = (line.match(/\{/g) || []).length
+    const closeBraces = (line.match(/\}/g) || []).length
+    braceCount += openBraces - closeBraces
+    
+    if (insideFunction && braceCount <= 0) {
+      insideFunction = false
+      braceCount = 0
+      continue
+    }
+    
+    // If we're not inside a function, this is top-level code
+    if (!insideFunction && trimmed) {
+      topLevelStatements.push(line)
+    }
   }
   
+  console.log('📝 Found top-level statements:', topLevelStatements.length)
+  
+  // Convert each top-level statement to AssemblyScript
+  topLevelStatements.forEach(statement => {
+    const trimmed = statement.trim()
+    let converted = statement
+    
+    // Convert console.log statements
+    if (trimmed.includes('console.log(')) {
+      converted = statement.replace(/console\.log\(/g, 'log(')
+      initLines.push('  ' + converted.trim())
+    }
+    
+    // Convert document.getElementById statements
+    else if (trimmed.includes('document.getElementById(')) {
+      // Extract variable assignment: const appElement = document.getElementById('app')
+      const match = trimmed.match(/(?:const|let|var)\s+(\w+)\s*=\s*document\.getElementById\(['"]([^'"]+)['"]\)/)
+      if (match) {
+        const varName = match[1]
+        const elementId = match[2]
+        initLines.push(`  // Get element: ${elementId}`)
+        initLines.push(`  let ${varName} = getElementById("${elementId}")`)
+      }
+    }
+    
+    // Convert if statements that check for elements
+    else if (trimmed.startsWith('if (') && trimmed.includes(') {')) {
+      const match = trimmed.match(/if\s*\(\s*(\w+)\s*\)/)
+      if (match) {
+        const varName = match[1]
+        initLines.push(`  if (${varName} != null) {`)
+        
+        // Look ahead to find the content inside the if block
+        const nextLines = topLevelStatements.slice(topLevelStatements.indexOf(statement) + 1)
+        for (const nextLine of nextLines) {
+          const nextTrimmed = nextLine.trim()
+          if (nextTrimmed === '}') {
+            initLines.push('  }')
+            break
+          } else if (nextTrimmed.includes('console.log(')) {
+            const logConverted = nextTrimmed.replace(/console\.log\(/g, 'log(')
+            initLines.push('    ' + logConverted)
+          } else if (nextTrimmed.includes('addEventListener(')) {
+            // Convert event listeners - this is more complex, we'll add a placeholder
+            initLines.push('    // Event listener setup - handled by DOM bindings')
+          }
+        }
+      }
+    }
+  })
+  
+  // If no meaningful initialization was found, add a default
+  if (initLines.length === 0) {
+    initLines.push('  // Initialize WASM module')
+    initLines.push('  log("WASM module initialized successfully!")')
+    
+    // Add DOM initialization based on detected APIs
+    if (analysis.domAPIs.has('document\\.getElementById\\(')) {
+      initLines.push('  // Initialize DOM elements')
+      initLines.push('  let appElement = getElementById("app")')
+      initLines.push('  if (appElement != null) {')
+      initLines.push('    log("Found app element!")')
+      initLines.push('  }')
+    }
+  }
+  
+  console.log('✅ Generated initialization lines:', initLines.length)
   return initLines.join('\n')
 }
 

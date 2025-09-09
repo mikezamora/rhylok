@@ -23,15 +23,15 @@ class ElementHandle {
 }
 
 // DOM element access using external host functions
-@external("extism:host/env", "dom_get_element_by_id")
-declare function dom_get_element_by_id(idOffset: u32): i32
+@external("extism:host/user", "dom_get_element_by_id")
+declare function dom_get_element_by_id(idPtr: u64, idLen: u64): i32
 
 function getElementById(id: string): ElementHandle | null {
   Host.outputString("🔧 AssemblyScript getElementById called with: '" + id + "'")
   Host.outputString("🔧 String length: " + id.length.toString())
   const idMem = Memory.allocateString(id)
   Host.outputString("🔧 Memory allocated at offset: " + idMem.offset.toString())
-  const result = dom_get_element_by_id(u32(idMem.offset))
+  const result = dom_get_element_by_id(idMem.offset, idMem.length)
   Host.outputString("🔧 Host function returned: " + result.toString())
   if (result > 0) {
     return new ElementHandle(id)
@@ -39,43 +39,35 @@ function getElementById(id: string): ElementHandle | null {
   return null
 }
 
-// DOM element creation using external host function
-@external("extism:host/env", "dom_create_element")
-declare function dom_create_element(tagNameOffset: u32): i32
-
-function createElement(tagName: string): ElementHandle | null {
-  const tagNameMem = Memory.allocateString(tagName)
-  const result = dom_create_element(u32(tagNameMem.offset))
-  if (result > 0) {
-    return new ElementHandle(tagName + "_" + result.toString())
-  }
-  return null
-}
-
 // Event listener setup using external host function
-@external("extism:host/env", "dom_add_event_listener")
-declare function dom_add_event_listener(elementIdOffset: u32, eventOffset: u32, handlerOffset: u32): i32
+@external("extism:host/user", "dom_add_event_listener")
+declare function dom_add_event_listener(elementIdPtr: u64, elementIdLen: u64, eventPtr: u64, eventLen: u64, handlerPtr: u64, handlerLen: u64): i32
 
 function addEventListener(element: ElementHandle, event: string, handler: string): void {
   const elementIdMem = Memory.allocateString(element.id)
   const eventMem = Memory.allocateString(event)
   const handlerMem = Memory.allocateString(handler)
-  dom_add_event_listener(u32(elementIdMem.offset), u32(eventMem.offset), u32(handlerMem.offset))
+  dom_add_event_listener(elementIdMem.offset, elementIdMem.length, eventMem.offset, eventMem.length, handlerMem.offset, handlerMem.length)
 }
 
 // Text content setting using external host function
-@external("extism:host/env", "dom_set_text_content")
-declare function dom_set_text_content(elementIdOffset: u32, textOffset: u32): i32
+@external("extism:host/user", "dom_set_text_content")
+declare function dom_set_text_content(elementIdPtr: u64, elementIdLen: u64, textPtr: u64, textLen: u64): i32
 
 function setTextContent(element: ElementHandle, text: string): void {
   const elementIdMem = Memory.allocateString(element.id)
   const textMem = Memory.allocateString(text)
-  dom_set_text_content(u32(elementIdMem.offset), u32(textMem.offset))
+  dom_set_text_content(elementIdMem.offset, elementIdMem.length, textMem.offset, textMem.length)
 }
 
-// Console log implementation using Host.outputString for CLI compatibility
+// Console logging host function
+@external("extism:host/user", "console_log")
+declare function console_log(messagePtr: u64, messageLen: u64): void
+
+// Console log implementation using host function
 function log(message: string): void {
-  Host.outputString(message)
+  const messageMem = Memory.allocateString(message)
+  console_log(messageMem.offset, messageMem.length)
 }
 
 // String utility functions for AssemblyScript
@@ -100,16 +92,6 @@ function toUpperCase(input: string): string {
   return result
 }
 
-// Fetch API implementation using external host function
-@external("extism:host/env", "fetch_request")
-declare function fetch_request(urlOffset: u32, methodOffset: u32): i32
-
-function fetch(url: string, options: string = "GET"): i32 {
-  const urlMem = Memory.allocateString(url)
-  const methodMem = Memory.allocateString(options)
-  return fetch_request(u32(urlMem.offset), u32(methodMem.offset))
-}
-
 // Simple test function that doesn't require host functions
 export function simple_test(): string {
   return "WASM is working!"
@@ -122,26 +104,42 @@ export function add_numbers(a: i32, b: i32): i32 {
 
 // Main entry point for WASM module - transpiled from actual TypeScript
 export function main(): i32 {
-  // Initialize DOM elements
+  log("Hello from TypeScript! This will become WASM.")
+  // Get element: app
   let appElement = getElementById("app")
-  if (appElement != null) {
-    log("Found app element!")
-  }
+  // Get element: test-button
+  let testButton = getElementById("test-button")
+  // Get element: dom-test
+  let domTestButton = getElementById("dom-test")
+  // Get element: output-area
+  let outputArea = getElementById("output-area")
+  // Get element: process-text
+  let processTextButton = getElementById("process-text")
+  // Get element: text-input
+  let textInput = getElementById("text-input")
+  log("TypeScript example initialized - ready for WASM conversion!")
   
   return 0
 }
 
+export function handleButtonClick(): void {
+  log("handleButtonClick called - this will be a WASM function!")
+  const outputArea = getElementById('output-area')
+  if (outputArea) {
+  setTextContent(outputArea, "Button clicked! WASM is working!")
+  }
+}
 
+export function processUserInput(input: string): string {
+  // Simple text processing that will run in WASM
+  return toUpperCase(reverseString(input))
+  return 0
+}
 
 
 // Export function for DOM element interaction  
 export function dom_get_element(): string {
   return '{"status": "dom_get_element_available"}'
-}
-
-// Export function for DOM element creation
-export function dom_create_element_test(): string {
-  return '{"status": "dom_create_element_available"}'
 }
 
 // Export function for event listener testing
@@ -152,9 +150,4 @@ export function dom_add_event_listener_test(): string {
 // Export function for text content updates
 export function dom_set_text(): string {
   return '{"status": "dom_set_text_available"}'
-}
-
-// Export function for fetch API
-export function fetch_test(): string {
-  return '{"status": "fetch_available"}'
 }

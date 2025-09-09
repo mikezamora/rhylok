@@ -1,108 +1,79 @@
 {
   "domAPIs": [
     "document\\.getElementById\\(",
-    "document\\.createElement\\(",
     "\\.addEventListener\\(",
     "\\.textContent\\s*=",
     "\\.value",
-    "console\\.log\\(",
-    "fetch\\("
+    "console\\.log\\("
   ],
   "functions": [
     {
-      "name": "p",
-      "params": [
-        "e"
-      ],
-      "returnType": "void",
-      "body": "const t={"
-    },
-    {
-      "name": "s",
-      "params": [
-        "e"
-      ],
-      "returnType": "void",
-      "body": "if(e.ep)return;e.ep=!0;const t=p(e);fetch(e.href,t)"
-    },
-    {
-      "name": "f",
+      "name": "handleButtonClick",
       "params": [],
       "returnType": "void",
-      "body": "console.log(\"handleButtonClick called - this will be a WASM function!\");const o=document.getElementById(\"output-area\");o&&(o.textContent=\"Button clicked! WASM is working!\")"
+      "body": "\n  console.log(\"handleButtonClick called - this will be a WASM function!\")\n  const outputArea = document.getElementById('output-area')\n  if (outputArea) {\n    outputArea.textContent = \"Button clicked! WASM is working!\"\n  "
     },
     {
-      "name": "m",
+      "name": "processUserInput",
       "params": [
-        "o"
+        "input: string"
       ],
-      "returnType": "void",
-      "body": "return o.split(\"\").reverse().join(\"\").toUpperCase()"
+      "returnType": "string",
+      "body": "\n  // Simple text processing that will run in WASM\n  return input.split('').reverse().join('').toUpperCase()\n"
     }
   ],
   "variables": [
     {
-      "name": "n",
+      "name": "appElement",
       "type": "any",
-      "initialValue": "document.createElement(\"link\").relList"
+      "initialValue": "document.getElementById('app')"
     },
     {
-      "name": "e",
-      "type": "any"
-    },
-    {
-      "name": "t",
-      "type": "any"
-    },
-    {
-      "name": "r",
-      "type": "any"
-    },
-    {
-      "name": "t",
+      "name": "testButton",
       "type": "any",
-      "initialValue": "{}"
+      "initialValue": "document.getElementById('test-button')"
     },
     {
-      "name": "t",
+      "name": "domTestButton",
       "type": "any",
-      "initialValue": "p(e)"
+      "initialValue": "document.getElementById('dom-test')"
     },
     {
-      "name": "a",
+      "name": "outputArea",
       "type": "any",
-      "initialValue": "document.getElementById(\"app\")"
+      "initialValue": "document.getElementById('output-area')"
     },
     {
-      "name": "i",
+      "name": "processTextButton",
       "type": "any",
-      "initialValue": "document.getElementById(\"test-button\")"
+      "initialValue": "document.getElementById('process-text')"
     },
     {
-      "name": "l",
+      "name": "textInput",
       "type": "any",
-      "initialValue": "document.getElementById(\"dom-test\"),c=document.getElementById(\"output-area\")"
+      "initialValue": "document.getElementById('text-input') as HTMLInputElement"
     },
     {
-      "name": "u",
+      "name": "inputText",
       "type": "any",
-      "initialValue": "document.getElementById(\"process-text\"),d=document.getElementById(\"text-input\")"
+      "initialValue": "textInput.value"
     },
     {
-      "name": "o",
+      "name": "processedText",
       "type": "any",
-      "initialValue": "d.value,n=m(o)"
+      "initialValue": "processUserInput(inputText)"
     },
     {
-      "name": "o",
+      "name": "outputArea",
       "type": "any",
-      "initialValue": "document.getElementById(\"output-area\")"
+      "initialValue": "document.getElementById('output-area')"
     }
   ],
   "detectedHostFunctions": [
     {
       "name": "dom_get_element_by_id",
       "inputs": [
+        "ptr",
         "ptr"
       ],
       "outputs": [
@@ -111,18 +82,11 @@
       "description": "Get DOM element by ID, returns 1 if found, 0 if not"
     },
     {
-      "name": "dom_create_element",
-      "inputs": [
-        "ptr"
-      ],
-      "outputs": [
-        "i32"
-      ],
-      "description": "Create DOM element by tag name, returns element ID if successful"
-    },
-    {
       "name": "dom_add_event_listener",
       "inputs": [
+        "ptr",
+        "ptr",
+        "ptr",
         "ptr",
         "ptr",
         "ptr"
@@ -136,6 +100,8 @@
       "name": "dom_set_text_content",
       "inputs": [
         "ptr",
+        "ptr",
+        "ptr",
         "ptr"
       ],
       "outputs": [
@@ -146,21 +112,11 @@
     {
       "name": "console_log",
       "inputs": [
+        "ptr",
         "ptr"
       ],
       "outputs": [],
       "description": "Console logging from WASM"
-    },
-    {
-      "name": "fetch_request",
-      "inputs": [
-        "ptr",
-        "ptr"
-      ],
-      "outputs": [
-        "i32"
-      ],
-      "description": "Perform HTTP fetch request"
     }
   ]
 }

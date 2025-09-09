@@ -11,7 +11,8 @@
     "example"
   ],
   "scripts": {
-    "build": "tsc && cp -r templates dist/",
+    "clean": "rm -rf dist && mkdir -p dist",
+    "build": "npm run clean && tsc && cp -r templates dist/",
     "dev": "tsc --watch",
     "test": "npm run build && node test/basic.js",
     "prepublishOnly": "npm run build"
