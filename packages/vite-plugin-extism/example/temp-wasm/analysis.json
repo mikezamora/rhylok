@@ -11,7 +11,7 @@
       "name": "handleButtonClick",
       "params": [],
       "returnType": "void",
-      "body": "\n  console.log(\"handleButtonClick called - this will be a WASM function!\")\n  const outputArea = document.getElementById('output-area')\n  if (outputArea) {\n    outputArea.textContent = \"Button clicked! WASM is working!\"\n  "
+      "body": "\n//   console.log(\"handleButtonClick called - this will be a WASM function!\")\n//   const outputArea = document.getElementById('output-area')\n//   if (outputArea) {\n//     outputArea.textContent = \"Button clicked! WASM is working!\"\n//   "
     },
     {
       "name": "processUserInput",
@@ -19,7 +19,7 @@
         "input: string"
       ],
       "returnType": "string",
-      "body": "\n  // Simple text processing that will run in WASM\n  return input.split('').reverse().join('').toUpperCase()\n"
+      "body": "\n//   // Simple text processing that will run in WASM\n//   return input.split('').reverse().join('').toUpperCase()\n// "
     }
   ],
   "variables": [

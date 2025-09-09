@@ -283,6 +283,10 @@ export function vitePluginExtism(options: ExtismPluginOptions = {}): Plugin {
       wasm: [{
         url: `./${wasmFileName}`  // Use URL for browser compatibility, let Extism auto-assign "main" as the last module
       }],
+      memory: {
+        max_pages: 16
+      },
+      allowed_hosts: null,
       ...manifest
     }
 
@@ -504,12 +508,12 @@ class ElementHandle {
 declare function dom_get_element_by_id(idPtr: u64, idLen: u64): i32
 
 function getElementById(id: string): ElementHandle | null {
-  Host.outputString("🔧 AssemblyScript getElementById called with: '" + id + "'")
-  Host.outputString("🔧 String length: " + id.length.toString())
+  log("🔧 AssemblyScript getElementById called with: '" + id + "'")
+  log("🔧 String length: " + id.length.toString())
   const idMem = Memory.allocateString(id)
-  Host.outputString("🔧 Memory allocated at offset: " + idMem.offset.toString())
+  log("🔧 Memory allocated at offset: " + idMem.offset.toString())
   const result = dom_get_element_by_id(idMem.offset, idMem.length)
-  Host.outputString("🔧 Host function returned: " + result.toString())
+  log("🔧 Host function returned: " + result.toString())
   if (result > 0) {
     return new ElementHandle(id)
   }

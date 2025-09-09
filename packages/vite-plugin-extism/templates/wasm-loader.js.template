@@ -228,14 +228,16 @@ class {{ADAPTER_CLASS_NAME}} {
       
       // Initialize the WASM module
       try {
-        console.log('🚀 Calling WASM main function...')
-        const result = await this.plugin.call('main', new TextEncoder().encode(''))
-        if (result) {
-          const output = new TextDecoder().decode(result.buffer)
-          console.log('✅ WASM main result:', output)
-        }
+        const pluginExports = await this.plugin.getExports()
+        console.log(`pluginExports: ${JSON.stringify(pluginExports, null, 2)}`)
+        const pluginImports = await this.plugin.getImports()
+        console.log(`pluginImports: ${JSON.stringify(pluginImports, null, 2)}`)
+        
+        const result = await this.plugin.call('main')  // No input needed for main function
+        console.log('✅ WASM main function completed, result:', result)
       } catch (error) {
         console.log('⚠️  No main function found or error:', error.message)
+        console.log('⚠️  Error details:', error)
       }
       
       this.isInitialized = true
@@ -273,33 +275,40 @@ class {{ADAPTER_CLASS_NAME}} {
       const testButton = document.getElementById('test-button')
       if (testButton) {
         testButton.addEventListener('click', async () => {
-          console.log('�️ Test button clicked, calling WASM...')
+          console.log('🖱️ Test button clicked, calling WASM handleButtonClick...')
           try {
             const result = await this.plugin.call('handleButtonClick')
-            if (result) {
-              console.log('✅ Button click result:', result.text())
-            }
+            console.log('✅ Button click completed')
           } catch (error) {
             console.log('❌ WASM button handler error:', error.message)
           }
         })
       }
+
+      // Setup DOM test button (directly manipulates DOM without WASM)
+      const domTestButton = document.getElementById('dom-test')
+      const outputArea = document.getElementById('output-area')
+      if (domTestButton && outputArea) {
+        domTestButton.addEventListener('click', () => {
+          outputArea.textContent = `DOM Updated at ${new Date().toLocaleTimeString()}`
+          console.log('✅ DOM manipulation completed')
+        })
+      }
       
-      // Setup input processing
-      const userInput = document.getElementById('user-input')
-      if (userInput) {
-        userInput.addEventListener('input', async (e) => {
+      // Setup text processing (processUserInput WASM function)
+      const processTextButton = document.getElementById('process-text')
+      const textInput = document.getElementById('text-input')
+      if (processTextButton && textInput && outputArea) {
+        processTextButton.addEventListener('click', async () => {
+          const inputText = textInput.value
+          console.log('🔤 Processing text:', inputText)
           try {
-            const result = await this.callWasmFunction('processUserInput', e.target.value)
-            console.log('✅ Input processing result:', result)
-            
-            // Display result in output area
-            const outputArea = document.getElementById('output-area')
-            if (outputArea) {
-              outputArea.textContent = `Processed: ${result}`
-            }
+            const result = await this.callWasmFunction('processUserInput', inputText)
+            outputArea.textContent = `Processed: "${result}"`
+            console.log('✅ Text processing completed:', result)
           } catch (error) {
-            console.log('❌ WASM input processing error:', error.message)
+            console.log('❌ WASM text processing error:', error.message)
+            outputArea.textContent = `Error: ${error.message}`
           }
         })
       }

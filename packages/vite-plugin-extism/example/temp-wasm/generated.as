@@ -27,12 +27,12 @@ class ElementHandle {
 declare function dom_get_element_by_id(idPtr: u64, idLen: u64): i32
 
 function getElementById(id: string): ElementHandle | null {
-  Host.outputString("🔧 AssemblyScript getElementById called with: '" + id + "'")
-  Host.outputString("🔧 String length: " + id.length.toString())
+  log("🔧 AssemblyScript getElementById called with: '" + id + "'")
+  log("🔧 String length: " + id.length.toString())
   const idMem = Memory.allocateString(id)
-  Host.outputString("🔧 Memory allocated at offset: " + idMem.offset.toString())
+  log("🔧 Memory allocated at offset: " + idMem.offset.toString())
   const result = dom_get_element_by_id(idMem.offset, idMem.length)
-  Host.outputString("🔧 Host function returned: " + result.toString())
+  log("🔧 Host function returned: " + result.toString())
   if (result > 0) {
     return new ElementHandle(id)
   }
@@ -107,34 +107,12 @@ export function main(): i32 {
   log("Hello from TypeScript! This will become WASM.")
   // Get element: app
   let appElement = getElementById("app")
-  // Get element: test-button
-  let testButton = getElementById("test-button")
-  // Get element: dom-test
-  let domTestButton = getElementById("dom-test")
-  // Get element: output-area
-  let outputArea = getElementById("output-area")
-  // Get element: process-text
-  let processTextButton = getElementById("process-text")
-  // Get element: text-input
-  let textInput = getElementById("text-input")
   log("TypeScript example initialized - ready for WASM conversion!")
   
   return 0
 }
 
-export function handleButtonClick(): void {
-  log("handleButtonClick called - this will be a WASM function!")
-  const outputArea = getElementById('output-area')
-  if (outputArea) {
-  setTextContent(outputArea, "Button clicked! WASM is working!")
-  }
-}
 
-export function processUserInput(input: string): string {
-  // Simple text processing that will run in WASM
-  return toUpperCase(reverseString(input))
-  return 0
-}
 
 
 // Export function for DOM element interaction  
