@@ -11,9 +11,11 @@ export class ScoreManager {
   constructor() {}
   
   public addHit(accuracy: number): void {
-    // Score based on accuracy (0.0 to 1.0)
+    // Score based on accuracy (0.0 to 1.0), but handle edge cases
     const baseScore = 100;
-    const accuracyBonus = Math.floor(accuracy * 50);
+    // Clamp accuracy to valid range and handle edge cases
+    const clampedAccuracy = Math.max(0, Math.min(1, accuracy));
+    const accuracyBonus = Math.floor(clampedAccuracy * 50);
     const comboBonus = Math.min(this.combo * 2, 100);
     
     const noteScore = baseScore + accuracyBonus + comboBonus;
